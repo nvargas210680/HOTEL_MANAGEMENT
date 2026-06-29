@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Guests(models.Model):
     # Django usually uses 'id', but we can map it to your 'guest_id'
@@ -25,6 +26,7 @@ class Rooms(models.Model):
     price_type = models.CharField(max_length=50)
     price_per_night = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, default='Available')
+    picture = models.URLField(max_length=500, blank=True, null=True)
 
     class Meta:
         db_table = 'rooms' # Matches your PostgreSQL table name
@@ -85,6 +87,8 @@ class Staff(models.Model):
     phone_number = models.CharField(max_length=20)
     role = models.CharField(max_length=50)
 
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='staff_profile', null=True, blank=True)
+
     class Meta:
         db_table = 'staff'  # This MUST match your SQL table name exactly
 
@@ -123,5 +127,11 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment {self.payment_id} - Booking {self.booking_id}"
+    
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    # This forces the email field to have a unique constraint at the database level
+    User._meta.get_field('email')._unique = True
 
 

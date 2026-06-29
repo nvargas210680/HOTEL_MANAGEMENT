@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
+from datetime import timedelta
 """
 Django settings for hotel_api project.
 
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'bookings',
     'rest_framework',
+    'corsheaders',
 
 
 ]
@@ -49,11 +51,17 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 ROOT_URLCONF = 'hotel_api.urls'
@@ -126,3 +134,30 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+AUTHENTICATION_BACKENDS = [
+    'bookings.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # How long the short-lived access token lasts before expiring
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    
+    # How long the refresh token lasts (used to grab a new access token silently)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    
+    # Automatically rotate refresh tokens when a new one is requested
+    'ROTATE_REFRESH_TOKENS': True,
+    
+    # Blacklist the old refresh tokens so they can't be reused maliciously
+    'BLACKLIST_AFTER_ROTATION': True,
+}
