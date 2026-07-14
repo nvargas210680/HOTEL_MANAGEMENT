@@ -20,7 +20,7 @@ class Guests(models.Model):
 class Rooms(models.Model):
     room_id = models.AutoField(primary_key=True)
     hotel_id = models.IntegerField() # We will link this to a Hotel model later!
-    room_number = models.CharField(max_length=10)
+    room_number = models.CharField(max_length=10, unique=True)
     bed_count = models.IntegerField()
     bed_type = models.CharField(max_length=50)
     price_type = models.CharField(max_length=50)
