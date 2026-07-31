@@ -17,23 +17,36 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from bookings.views import HotelViewSet
-from bookings.views import RoomsViewSet
-from django.urls import path
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
-# The Router automatically creates URLs like /api/hotels/
+# Import all 4 of your views from the bookings app
+from bookings.views import (
+    HotelViewSet, 
+    RoomsViewSet, 
+    GuestsViewSet, 
+    RegisterView
+)
+
+# 1. Register the ViewSets with the Router
 router = DefaultRouter()
 router.register(r'hotels', HotelViewSet)
 router.register(r'rooms', RoomsViewSet)
+router.register(r'guests', GuestsViewSet)
 
+# 2. Combine all URL routes
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
+    
+    # Token Authentication Endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # This connects all our API endpoints
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Registration Endpoint
+    path('api/register/', RegisterView.as_view(), name='auth_register'),
+    
+    # ViewSet Routes (/api/hotels/, /api/rooms/, /api/guests/)
+    path('api/', include(router.urls)),
 ]
-

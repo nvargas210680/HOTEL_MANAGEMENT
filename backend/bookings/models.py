@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Guests(models.Model):
-    # Django usually uses 'id', but we can map it to your 'guest_id'
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     guest_id = models.AutoField(primary_key=True) 
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -11,12 +11,13 @@ class Guests(models.Model):
     id_document = models.CharField(max_length=50)
 
     class Meta:
-        db_table = 'guests'  # This MUST match your SQL table name exactly
+        db_table = 'guests'  
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+    
 
-# Create your models here.
+
 class Rooms(models.Model):
     room_id = models.AutoField(primary_key=True)
     hotel_id = models.IntegerField() # We will link this to a Hotel model later!
