@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from bookings.views import CustomTokenObtainPairView
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
@@ -22,31 +23,31 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-# Import all 4 of your views from the bookings app
+
 from bookings.views import (
     HotelViewSet, 
     RoomsViewSet, 
     GuestsViewSet, 
-    RegisterView
+    RegisterView,
+    BookingViewSet
 )
 
-# 1. Register the ViewSets with the Router
+
 router = DefaultRouter()
 router.register(r'hotels', HotelViewSet)
 router.register(r'rooms', RoomsViewSet)
 router.register(r'guests', GuestsViewSet)
+router.register(r'bookings', BookingViewSet, basename='booking')
 
-# 2. Combine all URL routes
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Token Authentication Endpoints
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # Registration Endpoint
     path('api/register/', RegisterView.as_view(), name='auth_register'),
     
-    # ViewSet Routes (/api/hotels/, /api/rooms/, /api/guests/)
     path('api/', include(router.urls)),
 ]

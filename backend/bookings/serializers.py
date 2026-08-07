@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Guests
-from .models import Hotel
-from .models import Rooms
+from .models import Hotel, Rooms, Guests, Bookings
+
+
 
 class HotelSerializer(serializers.ModelSerializer):
     amenities = serializers.StringRelatedField(many=True)
@@ -24,7 +24,7 @@ class GuestsSerializer(serializers.ModelSerializer):
         read_only_fields = ['guest_id', 'user']
 
 class RegisterSerializer(serializers.ModelSerializer):
-    # Additional fields needed for the Guest profile
+    
     phone_number = serializers.CharField(write_only=True)
     id_document = serializers.CharField(write_only=True)
     first_name = serializers.CharField(write_only=True)
@@ -42,7 +42,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         first_name = validated_data.pop('first_name')
         last_name = validated_data.pop('last_name')
 
-        # 2. Create the User with a hashed password
+        
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
@@ -51,7 +51,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=last_name
         )
 
-        # 3. Create the linked Guests profile
+        
         Guests.objects.create(
             user=user,
             first_name=first_name,
@@ -62,3 +62,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+class BookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bookings
+        fields = '__all__'
