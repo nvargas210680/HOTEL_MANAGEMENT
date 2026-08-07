@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import Link from 'next/link';
 
 export default function LoginPage() {
 
@@ -10,13 +11,17 @@ export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
-    useEffect(() => {
-  // 1. Check if a token is already in localStorage
+  useEffect(() => {
   const token = localStorage.getItem('accessToken');
-  
-  // 2. If it exists, they are already logged in! Send them to the dashboard
-  if (token) {
-    router.push('/dashboard');
+  const storedUser = localStorage.getItem('user');
+
+  if (token && storedUser) {
+    const user = JSON.parse(storedUser);
+    if (user.is_staff) {
+      router.push('/dashboard');
+    } else {
+      router.push('/my-bookings');
+    }
   }
 }, [router]);
 
@@ -25,7 +30,7 @@ export default function LoginPage() {
     
 
   try {
-    // 1. Send the data to your Django API endpoint
+    
     const response = await fetch('http://127.0.0.1:8000/api/token/', {
       method: 'POST',
       headers: {
@@ -37,17 +42,29 @@ export default function LoginPage() {
       }),
     });
 
-    // 2. Wait for Django to reply and unpack its JSON answer
+    
     const data = await response.json();
 
     if (response.ok) {
-      console.log('Login successful! Token received:', data);
-      localStorage.setItem('accessToken', data.access);
-      router.push('/dashboard')
-    } else {
-      console.error('Login failed:', data.error || 'Invalid credentials');
-      alert(data.error || 'Invalid credentials');
-    }
+  console.log('Login successful! Response data:', data);
+  
+  
+  localStorage.setItem('accessToken', data.access);
+  
+  
+  localStorage.setItem('user', JSON.stringify({
+    username: data.username,
+    is_staff: data.is_staff,
+    first_name: data.first_name,
+  }));
+
+  
+  if (data.is_staff) {
+    router.push('/dashboard');       
+  } else {
+    router.push('/my-bookings');     
+  }
+}
 
   } catch (error) {
     console.error('Network error connecting to Django:', error);
@@ -96,6 +113,12 @@ export default function LoginPage() {
         <button className="btn btn-primary w-100 mt-2">
             Login
         </button>
+         <div className="text-center mt-3">
+         <span className="text-muted small">Don't have an account? </span>
+          <Link href="/register" className="text-decoration-none fw-semibold">
+            Create Account
+         </Link>
+        </div>
        </form> 
       </div>
 
