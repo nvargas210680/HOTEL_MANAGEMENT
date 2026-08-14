@@ -3,12 +3,22 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function MyBookingsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const calculateNights = (checkIn, checkOut) => {
+    if (!checkIn || !checkOut) return 0;
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -34,6 +44,7 @@ export default function MyBookingsPage() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log("FETCHED BOOKINGS DATA:", data);
           setBookings(data);
         } else {
           // Treat non-200 responses safely by setting empty bookings
@@ -73,7 +84,6 @@ export default function MyBookingsPage() {
 
       <hr className="mb-4" />
 
-      {/* Loading state */}
       {loading ? (
         <div className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
@@ -88,7 +98,7 @@ export default function MyBookingsPage() {
             You haven't made any reservations with us yet.
           </p>
           <div>
-            <Link href="/rooms" className="btn btn-primary mt-2">
+            <Link href="/dashboard/rooms" className="btn btn-primary mt-2">
               Browse Rooms
             </Link>
           </div>
@@ -97,40 +107,61 @@ export default function MyBookingsPage() {
         /* Bookings List */
         <div className="row g-4">
           {bookings.map((booking) => (
-            <div key={booking.id} className="col-md-6 col-lg-4">
+            <div
+              key={booking.id || booking.booking_id}
+              className="col-md-6 col-lg-4"
+            >
               <div className="card h-100 shadow-sm border-0">
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <span className="badge bg-success">Confirmed</span>
-                    <small className="text-muted">ID: #{booking.id}</small>
+                    <small className="text-muted">
+                      ID: #{booking.id || booking.booking_id}
+                    </small>
                   </div>
-                  <h5 className="card-title fw-bold">
-                    Room {booking.room_number || booking.room}
+                  <h5 className="card-title fw-bold text-capitalize">
+                    {booking.room_details?.bed_type || "Standard Room"}
                   </h5>
-                  <p className="card-text text-muted small">
-                    <strong>Check-in:</strong> {booking.check_in}
-                    <br />
-                    <strong>Check-out:</strong> {booking.check_out}
-                  </p>
-                  {bookings.length === 0 ? (
-                    <div className="text-center py-5">
-                      <h3>You have no active bookings.</h3>
-                      <p>Ready for your next stay?</p>
-                      <Link
-                        href="/dashboard/rooms"
-                        className="btn btn-primary mt-2"
-                      >
-                        Browse Rooms
-                      </Link>
+
+                  {/* Number of Nights Highlight */}
+                  <div className="mb-2">
+                    <span className="badge bg-light text-dark border">
+                      🌙{" "}
+                      {calculateNights(
+                        booking.check_in_date || booking.check_in,
+                        booking.check_out_date || booking.check_out,
+                      )}{" "}
+                      Night(s)
+                    </span>
+                  </div>
+
+                  {/* NEW REAL-WORLD DISPLAY */}
+                  <div className="border-top pt-2 mt-2">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <span className="text-muted small">Nightly Rate:</span>
+                      <span className="fw-semibold">
+                        ${booking.room_details?.price_per_night} / night
+                      </span>
                     </div>
-                  ) : (
-                    <div className="row">
-                      {bookings.map((booking) => (
-                        
-                        <div key={booking.id}>...</div>
-                      ))}
-                    </div>
-                  )}
+
+                    {booking.total_price && (
+                      <div className="d-flex justify-content-between align-items-center mt-1">
+                        <span className="text-muted small">
+                          Est. Room Total:
+                        </span>
+                        <span className="fw-bold text-dark">
+                          ${booking.total_price}*
+                        </span>
+                      </div>
+                    )}
+
+                    <p
+                      className="text-muted text-end mb-0"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      *Excludes taxes, fees & incidentals
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

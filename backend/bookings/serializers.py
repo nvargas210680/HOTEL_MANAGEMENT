@@ -15,7 +15,7 @@ class RoomsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rooms
         
-        fields = ['room_id', 'hotel_id', 'room_number', 'bed_count', 'bed_type', 'price_type', 'price_per_night', 'status', 'picture']
+        fields = ['room_id', 'hotel_id', 'bed_count', 'bed_type', 'price_type', 'price_per_night', 'status', 'picture']
 
 class GuestsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -64,6 +64,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class BookingSerializer(serializers.ModelSerializer):
+    room_details = RoomsSerializer(source='room', read_only=True)
+
     class Meta:
         model = Bookings
         fields = '__all__'
+        read_only_fields = ['id', 'guest', 'total_price', 'created_at', 'updated_at']

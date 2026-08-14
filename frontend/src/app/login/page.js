@@ -20,7 +20,7 @@ export default function LoginPage() {
     if (user.is_staff) {
       router.push('/dashboard');
     } else {
-      router.push('/my-bookings');
+      router.push('/rooms');
     }
   }
 }, [router]);
@@ -62,7 +62,7 @@ export default function LoginPage() {
   if (data.is_staff) {
     router.push('/dashboard');       
   } else {
-    router.push('/my-bookings');     
+    router.push('/rooms');     
   }
 }
 

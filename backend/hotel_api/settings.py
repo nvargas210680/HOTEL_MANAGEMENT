@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'bookings',
     'rest_framework',
     'corsheaders',
+    'django.contrib.postgres',
 
 
 ]
