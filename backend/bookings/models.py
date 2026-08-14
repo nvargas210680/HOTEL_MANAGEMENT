@@ -1,8 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.postgres.constraints import ExclusionConstraint
-from django.contrib.postgres.fields import DateRangeField, RangeOperators
-from django.db.models import Func
 
 class Guests(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -40,7 +37,9 @@ class Rooms(models.Model):
     
 class Bookings(models.Model):
     booking_id = models.AutoField(primary_key=True)
+    # This connects to your Guests model
     guest = models.ForeignKey(Guests, on_delete=models.CASCADE)
+    # This connects to your Rooms model
     room = models.ForeignKey(Rooms, on_delete=models.CASCADE)
     check_in_date = models.DateField()
     check_out_date = models.DateField()
@@ -49,22 +48,9 @@ class Bookings(models.Model):
 
     class Meta:
         db_table = 'bookings'
-        constraints = [
-            ExclusionConstraint(
-                name='prevent_overlapping_room_bookings',
-                expressions=[
-                    ('room', '='),
-                    (
-                        Func('check_in_date', 'check_out_date', function='daterange'),
-                        RangeOperators.OVERLAPS,
-                    ),
-                ],
-            )
-        ]
 
     def __str__(self):
         return f"Booking {self.booking_id}: {self.guest} - Room {self.room.room_number}"
-    
     
 class Hotel(models.Model):
     hotel_id = models.AutoField(primary_key=True)
