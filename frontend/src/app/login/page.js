@@ -48,8 +48,8 @@ export default function LoginPage() {
     if (response.ok) {
   console.log('Login successful! Response data:', data);
   
-  
   localStorage.setItem('accessToken', data.access);
+  localStorage.setItem('refreshToken', data.refresh);
   
   
   localStorage.setItem('user', JSON.stringify({

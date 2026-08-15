@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { apiFetch } from "@/utils/api";
 
 export default function RoomsPage() {
   const [data, setData] = useState([]);
@@ -36,9 +37,9 @@ export default function RoomsPage() {
     setCheckOut(null);
 
     try {
-      const res = await fetch(
-        `http://127.0.0.1:8000/api/bookings/booked_dates/?room_id=${room.room_id}`,
-      );
+      const res = await apiFetch(
+      `/api/bookings/booked_dates/?room_id=${room.room_id}`
+    );
       const bookedRanges = await res.json();
 
       const intervals = bookedRanges.map((b) => ({
@@ -60,16 +61,12 @@ export default function RoomsPage() {
     const token = localStorage.getItem("accessToken");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/bookings/", {
+      const response = await apiFetch("/api/bookings/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
-          room: selectedRoom.room_id, // or selectedRoom.id depending on your model
-          check_in_date: checkIn, // Renamed to check_in_date
-          check_out_date: checkOut, // Renamed to check_out_date
+          room: selectedRoom.room_id,
+          check_in_date: checkIn, 
+          check_out_date: checkOut, 
         }),
       });
 
@@ -91,7 +88,7 @@ export default function RoomsPage() {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/rooms/");
+        const response = await apiFetch("/api/rooms/");
         const roomsJson = await response.json();
         setData(roomsJson);
       } catch (error) {
@@ -107,13 +104,8 @@ export default function RoomsPage() {
       room.room_id === roomId ? { ...room, status: newStatus } : room,
     );
     setData(updatedRooms);
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      console.error("No access token found. User must be logged in.");
-      return;
-    }
     try {
-      await fetch(`http://127.0.0.1:8000/api/rooms/${roomId}/`, {
+      await apiFetch("/api/rooms/${roomId}/", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
