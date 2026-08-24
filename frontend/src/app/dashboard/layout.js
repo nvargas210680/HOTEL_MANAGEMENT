@@ -1,6 +1,39 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function DashboardLayout({ children }) {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      router.push('/login');
+    } else {
+      setIsAuthenticated(true);
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    router.push('/login');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container-fluid">
       <div className="row vh-100">
@@ -18,10 +51,12 @@ export default function DashboardLayout({ children }) {
             <Link href="/dashboard/rooms" className="nav-link text-white my-1 hover-opacity">
               Manage Rooms
             </Link>
-            <Link href="/dashboard/rooms/create" className="nav-link text-white my-1 hover-opacity">
-              Add New Rooms
-            </Link>
           </nav>
+
+          {/* Logout Button */}
+          <button onClick={handleLogout} className="btn btn-outline-danger w-100 mt-auto">
+            Logout
+          </button>
         </aside>
 
         {/* MAIN CONTENT AREA */}

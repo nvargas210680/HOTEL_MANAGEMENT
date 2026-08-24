@@ -134,5 +134,7 @@ class Payment(models.Model):
     User = get_user_model()
     # This forces the email field to have a unique constraint at the database level
     User._meta.get_field('email')._unique = True
+    
+    
 
 

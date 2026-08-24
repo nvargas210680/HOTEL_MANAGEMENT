@@ -162,3 +162,13 @@ SIMPLE_JWT = {
     # Blacklist the old refresh tokens so they can't be reused maliciously
     'BLACKLIST_AFTER_ROTATION': True,
 }
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',  # <-- Add this line
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}

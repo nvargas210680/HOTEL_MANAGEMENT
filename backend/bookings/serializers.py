@@ -14,8 +14,17 @@ class HotelSerializer(serializers.ModelSerializer):
 class RoomsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rooms
-        
-        fields = ['room_id', 'hotel_id', 'bed_count', 'bed_type', 'price_type', 'price_per_night', 'status', 'picture']
+        read_only_fields = ['hotel_id']
+        fields = [
+            'room_id',
+            'room_number',
+            'bed_count',
+            'bed_type',
+            'price_type',
+            'price_per_night',
+            'status',
+            'picture'
+        ]
 
 class GuestsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -70,3 +79,27 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Bookings
         fields = '__all__'
         read_only_fields = ['id', 'guest', 'total_price', 'created_at', 'updated_at']
+        
+        
+class AdminBookingSerializer(serializers.ModelSerializer):
+        guest_name = serializers.SerializerMethodField()
+        guest_email = serializers.ReadOnlyField(source='guest.email')
+        room_number = serializers.ReadOnlyField(source='room.room_number')
+        
+        class Meta:
+                model = Bookings
+                fields = [
+                    'booking_id', 
+                    'guest_name', 
+                    'guest_email', 
+                    'room_number', 
+                    'check_in_date', 
+                    'check_out_date', 
+                    'status', 
+                    'total_price'
+                ]
+        
+        def get_guest_name(self, obj):
+                if obj.guest:
+                    return f"{obj.guest.first_name} {obj.guest.last_name}".strip()
+                return "Unknown Guest"

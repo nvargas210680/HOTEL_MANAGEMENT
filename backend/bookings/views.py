@@ -1,42 +1,80 @@
 from django.shortcuts import render
-from rest_framework import viewsets, generics, permissions
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.contrib.auth.models import User
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.decorators import action
-from rest_framework.response import Response
 from django.db import IntegrityError
+
+from rest_framework import viewsets, generics, permissions, status
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Hotel, Rooms, Guests, Bookings
-
 
 from .serializers import (
     HotelSerializer, 
     RoomsSerializer, 
     GuestsSerializer, 
     RegisterSerializer,
-    BookingSerializer
+    BookingSerializer,
+    AdminBookingSerializer
 )
+
+# --- ADMIN BOOKING VIEWS ---
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_booking_list(request):
+    bookings = Bookings.objects.all().order_by('-booking_id')
+    serializer = AdminBookingSerializer(bookings, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET', 'PATCH', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_booking_detail(request, pk):
+    try:
+        booking = Bookings.objects.get(pk=pk)
+    except Bookings.DoesNotExist:
+        return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = AdminBookingSerializer(booking)
+        return Response(serializer.data)
+
+    elif request.method in ['PATCH', 'PUT']:
+        serializer = AdminBookingSerializer(booking, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        booking.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
-        
-        # Inject user details into the JSON response
+
         data['is_staff'] = self.user.is_staff
         data['username'] = self.user.username
         data['email'] = self.user.email
         data['first_name'] = self.user.first_name
         data['last_name'] = self.user.last_name
-        
+
         return data
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
-    
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = RegisterSerializer
+
 
 class HotelViewSet(viewsets.ModelViewSet):
     queryset = Hotel.objects.all()
@@ -48,6 +86,9 @@ class RoomsViewSet(viewsets.ModelViewSet):
     serializer_class = RoomsSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def perform_create(self, serializer):
+        serializer.save(hotel_id=1)
+
 class GuestsViewSet(viewsets.ModelViewSet):
     queryset = Guests.objects.all()
     serializer_class = GuestsSerializer
@@ -58,18 +99,6 @@ class GuestsViewSet(viewsets.ModelViewSet):
             return Guests.objects.all()
         return Guests.objects.filter(user=self.request.user)
 
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = RegisterSerializer
-    serializer_class = RegisterSerializer
-    
-class GuestsViewSet(viewsets.ModelViewSet):
-    queryset = Guests.objects.all()
-    serializer_class = GuestsSerializer
-    permission_classes = [IsAuthenticated]
-    
-
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Bookings.objects.all()
     serializer_class = BookingSerializer
@@ -79,7 +108,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         room = serializer.validated_data['room']
         check_in = serializer.validated_data['check_in_date']
         check_out = serializer.validated_data['check_out_date']
-        
+
         guest_instance, _ = Guests.objects.get_or_create(
             user=self.request.user,
             defaults={
@@ -88,7 +117,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                 'email': self.request.user.email or ''
             }
         )
-        
+
         nights = (check_out - check_in).days
         total_price = nights * getattr(room, 'price', getattr(room, 'price_per_night', 0))
 
@@ -109,13 +138,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         if not room_id:
             return Response({"error": "room_id query parameter is required"}, status=400)
 
-        # Retrieve active confirmed bookings for the requested room
         bookings = Bookings.objects.filter(
             room_id=room_id, 
             status='Confirmed'
         ).values('check_in_date', 'check_out_date')
 
         return Response(list(bookings))
-    
-
-
