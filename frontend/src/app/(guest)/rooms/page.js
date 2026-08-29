@@ -38,8 +38,8 @@ export default function RoomsPage() {
 
     try {
       const res = await apiFetch(
-      `/api/bookings/booked_dates/?room_id=${room.room_id}`
-    );
+        `/api/bookings/booked_dates/?room_id=${room.room_id}`,
+      );
       const bookedRanges = await res.json();
 
       const intervals = bookedRanges.map((b) => ({
@@ -65,8 +65,8 @@ export default function RoomsPage() {
         method: "POST",
         body: JSON.stringify({
           room: selectedRoom.room_id,
-          check_in_date: checkIn, 
-          check_out_date: checkOut, 
+          check_in_date: checkIn,
+          check_out_date: checkOut,
         }),
       });
 
@@ -147,9 +147,10 @@ export default function RoomsPage() {
               <div key={room.room_id} className="col-12 col-md-6 col-lg-4 mb-4">
                 <div className="card h-100">
                   <img
-                    src={room.picture || "https://placehold.co/600x400"}
+                    src={room.picture || "/images/bright-hotel-room-bed.jpg"}
                     className="card-img-top"
                     alt={`Room ${room.room_number}`}
+                    style={{ height: "200px", objectFit: "cover" }}
                   />
 
                   <div className="card-body">

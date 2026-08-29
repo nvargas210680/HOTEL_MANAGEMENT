@@ -3,18 +3,20 @@ const BASE_URL = "http://127.0.0.1:8000";
 export async function apiFetch(endpoint, options = {}) {
   let accessToken = localStorage.getItem("accessToken");
 
-  
   const headers = {
-    "Content-Type": "application/json",
     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
     ...options.headers,
   };
+
+  // Only set application/json if the body is NOT FormData
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   let response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
-
 
   if (response.status === 401) {
     const refreshToken = localStorage.getItem("refreshToken");
@@ -28,7 +30,7 @@ export async function apiFetch(endpoint, options = {}) {
 
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json();
-        
+
         localStorage.setItem("accessToken", refreshData.access);
         if (refreshData.refresh) {
           localStorage.setItem("refreshToken", refreshData.refresh);
@@ -40,7 +42,6 @@ export async function apiFetch(endpoint, options = {}) {
           headers,
         });
       } else {
-        
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");

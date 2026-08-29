@@ -27,7 +27,7 @@ class Rooms(models.Model):
     price_type = models.CharField(max_length=50)
     price_per_night = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, default='Available')
-    picture = models.URLField(max_length=500, blank=True, null=True)
+    picture = models.ImageField(upload_to='rooms/', blank=True, null=True)
 
     class Meta:
         db_table = 'rooms' # Matches your PostgreSQL table name

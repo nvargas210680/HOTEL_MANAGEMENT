@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { apiFetch } from "@/utils/api";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState([]);
@@ -13,7 +15,67 @@ export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const [selectedPicture, setSelectedPicture] = useState(null);
+
   const [showModal, setShowModal] = useState(false);
+
+  // --- WALK-IN BOOKING STATE ---
+  const [selectedRoomForBooking, setSelectedRoomForBooking] = useState(null);
+  const [existingGuests, setExistingGuests] = useState([]);
+  const [isNewGuest, setIsNewGuest] = useState(true);
+  const [selectedGuestId, setSelectedGuestId] = useState("");
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState(null);
+
+  const parseStringToLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Helper to format Date object to "YYYY-MM-DD" string
+  const formatDateToYYYYMMDD = (date) => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const [walkInGuestData, setWalkInGuestData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    id_document: "",
+  });
+
+  const todayStr = formatDateToYYYYMMDD(new Date());
+  const tomorrowDate = new Date(Date.now() + 86400000);
+  const tomorrowStr = formatDateToYYYYMMDD(tomorrowDate);
+
+  const [bookingDates, setBookingDates] = useState({
+    check_in_date: todayStr,
+    check_out_date: tomorrowStr,
+  });
+
+  // Fetch guests list when walk-in modal opens
+  useEffect(() => {
+    if (selectedRoomForBooking) {
+      const fetchGuests = async () => {
+        try {
+          const response = await apiFetch("/api/guests/");
+          if (response.ok) {
+            const data = await response.json();
+            setExistingGuests(data);
+          }
+        } catch (err) {
+          console.error("Failed to load guests:", err);
+        }
+      };
+      fetchGuests();
+    }
+  }, [selectedRoomForBooking]);
   const [submitting, setSubmitting] = useState(false);
   const [newRoom, setNewRoom] = useState({
     room_number: "",
@@ -25,12 +87,12 @@ export default function RoomsPage() {
   });
 
   const handleInputChange = (e) => {
-  const { name, value } = e.target;
-  setNewRoom((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-};
+    const { name, value } = e.target;
+    setNewRoom((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   useEffect(() => {
     fetchRooms();
@@ -82,16 +144,24 @@ export default function RoomsPage() {
     setFormError(null); // Clear previous errors
 
     try {
+      // 1. Build the FormData object
+      const formData = new FormData();
+      formData.append("room_number", newRoom.room_number);
+      formData.append("bed_count", parseInt(newRoom.bed_count, 10));
+      formData.append("bed_type", newRoom.bed_type);
+      formData.append("price_type", newRoom.price_type);
+      formData.append("price_per_night", parseFloat(newRoom.price_per_night));
+      formData.append("status", newRoom.status);
+
+      // 2. Attach the image file if selected
+      if (selectedPicture) {
+        formData.append("picture", selectedPicture);
+      }
+
+      // 3. Pass formData as the body
       const response = await apiFetch("/api/rooms/", {
         method: "POST",
-        body: JSON.stringify({
-          room_number: newRoom.room_number,
-          bed_count: parseInt(newRoom.bed_count, 10),
-          bed_type: newRoom.bed_type,
-          price_type: newRoom.price_type,
-          price_per_night: parseFloat(newRoom.price_per_night),
-          status: newRoom.status,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -109,9 +179,10 @@ export default function RoomsPage() {
 
       const createdRoom = await response.json();
 
-      // Reset form and close modal on success
+      // Reset form, clear selected file, and close modal on success
       setRooms((prev) => [createdRoom, ...prev]);
       setShowModal(false);
+      setSelectedPicture(null); // Reset file selection
       setNewRoom({
         room_number: "",
         bed_count: 1,
@@ -126,7 +197,6 @@ export default function RoomsPage() {
       setSubmitting(false);
     }
   };
-
   const filteredRooms = useMemo(() => {
     return rooms.filter((r) => {
       const matchesSearch =
@@ -141,6 +211,126 @@ export default function RoomsPage() {
       return matchesSearch && matchesStatus;
     });
   }, [rooms, searchTerm, statusFilter]);
+  const handleWalkInSubmit = async (e) => {
+    e.preventDefault();
+    setBookingSubmitting(true);
+    setBookingError(null);
+
+    try {
+      let targetGuestId = selectedGuestId;
+
+      if (isNewGuest) {
+        // Build payload matching RegisterSerializer expected fields
+        const registerPayload = {
+          username: walkInGuestData.email, // Or use id_document / custom string
+          email: walkInGuestData.email,
+          password: `WalkIn_${Math.random().toString(36).slice(-8)}!`, // Temporary auto-generated password
+          first_name: walkInGuestData.first_name,
+          last_name: walkInGuestData.last_name,
+          phone_number: walkInGuestData.phone_number,
+          id_document: walkInGuestData.id_document,
+        };
+
+        // Call your registration endpoint (e.g., /api/register/ or /api/users/register/)
+        const regResponse = await apiFetch("/api/register/", {
+          method: "POST",
+          body: JSON.stringify(registerPayload),
+        });
+
+        if (!regResponse.ok) {
+          const errData = await regResponse.json().catch(() => ({}));
+          throw new Error(
+            errData.detail ||
+              JSON.stringify(errData) ||
+              "Failed to register new walk-in guest account.",
+          );
+        }
+
+        // Fetch the updated guest list to get the newly created guest_id
+        const guestsResponse = await apiFetch("/api/guests/");
+        if (guestsResponse.ok) {
+          const guestsList = await guestsResponse.json();
+          const createdGuest = guestsList.find(
+            (g) => g.email === walkInGuestData.email,
+          );
+          if (createdGuest) {
+            targetGuestId = createdGuest.guest_id;
+          }
+        }
+      }
+
+      if (!targetGuestId) {
+        throw new Error("Could not determine valid guest ID for this booking.");
+      }
+
+      // Submit booking with valid guest ID
+      const bookingPayload = {
+        room: selectedRoomForBooking.room_id,
+        guest_id: targetGuestId,
+        check_in_date: bookingDates.check_in_date,
+        check_out_date: bookingDates.check_out_date,
+      };
+
+      const bookingResponse = await apiFetch("/api/bookings/", {
+        method: "POST",
+        body: JSON.stringify(bookingPayload),
+      });
+
+      if (!bookingResponse.ok) {
+        const errData = await bookingResponse.json().catch(() => ({}));
+        throw new Error(
+          errData.error || errData.detail || "Failed to create booking.",
+        );
+      }
+
+      // Reset form and close modal
+      setSelectedRoomForBooking(null);
+      setWalkInGuestData({
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone_number: "",
+        id_document: "",
+      });
+      fetchRooms();
+    } catch (err) {
+      setBookingError(err.message);
+    } finally {
+      setBookingSubmitting(false);
+    }
+  };
+  // Example helper to construct exclude intervals from existing room bookings
+  const excludeIntervals = useMemo(() => {
+    if (!selectedRoomForBooking?.existing_bookings) return [];
+
+    return selectedRoomForBooking.existing_bookings.map((b) => ({
+      start: parseStringToLocalDate(b.check_in_date),
+      end: parseStringToLocalDate(b.check_out_date),
+    }));
+  }, [selectedRoomForBooking]);
+
+  const handleCheckInChange = (date) => {
+    const newInStr =
+      typeof date === "string" ? date : formatDateToYYYYMMDD(date);
+    const nextDay = new Date(new Date(newInStr).getTime() + 86400000);
+    const nextDayStr = formatDateToYYYYMMDD(nextDay);
+
+    // 3. Compare with current check-out date
+    if (newInStr >= bookingDates.check_out_date) {
+      // Check-in caught up to or passed check-out -> bump check-out to next day
+      setBookingDates((prev) => ({
+        ...prev,
+        check_in_date: newInStr,
+        check_out_date: nextDayStr,
+      }));
+    } else {
+      // Normal update: just change check_in_date
+      setBookingDates((prev) => ({
+        ...prev,
+        check_in_date: newInStr,
+      }));
+    }
+  };
 
   return (
     <div>
@@ -253,7 +443,16 @@ export default function RoomsPage() {
                             {r.status || "Available"}
                           </span>
                         </td>
+                        {/* CLEANED UP SINGLE ACTIONS COLUMN */}
                         <td className="text-end pe-3">
+                          {r?.status?.toLowerCase() === "available" && (
+                            <button
+                              className="btn btn-sm btn-outline-success me-2"
+                              onClick={() => setSelectedRoomForBooking(r)}
+                            >
+                              + Book Walk-In
+                            </button>
+                          )}
                           <select
                             className="form-select form-select-sm d-inline-block w-auto"
                             value={r.status || "Available"}
@@ -277,6 +476,7 @@ export default function RoomsPage() {
         </div>
       )}
 
+      {/* ADD ROOM MODAL */}
       {showModal && (
         <div
           className="modal fade show d-block"
@@ -394,6 +594,18 @@ export default function RoomsPage() {
                       <option value="Maintenance">Maintenance</option>
                     </select>
                   </div>
+
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">
+                      Room Picture
+                    </label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      accept="image/*"
+                      onChange={(e) => setSelectedPicture(e.target.files[0])}
+                    />
+                  </div>
                 </div>
 
                 <div className="modal-footer bg-light">
@@ -411,6 +623,256 @@ export default function RoomsPage() {
                     disabled={submitting}
                   >
                     {submitting ? "Creating..." : "Save Room"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WALK-IN BOOKING MODAL (UN-NESTED & COMPLETE) */}
+      {selectedRoomForBooking && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content shadow">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title fw-bold">
+                  Walk-In Booking — Room {selectedRoomForBooking.room_number}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setSelectedRoomForBooking(null)}
+                ></button>
+              </div>
+
+              <form onSubmit={handleWalkInSubmit}>
+                <div className="modal-body p-4">
+                  {bookingError && (
+                    <div className="alert alert-danger">{bookingError}</div>
+                  )}
+
+                  {/* 1. Stay Dates */}
+                  {/* --- 1. DATES SELECTION (react-datepicker) --- */}
+                  <h6 className="fw-bold mb-3 text-secondary">1. Stay Dates</h6>
+                  <div className="row g-3 mb-4">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Check-In Date
+                      </label>
+                      <DatePicker
+                        selected={parseStringToLocalDate(
+                          bookingDates.check_in_date,
+                        )}
+                        onChange={(date) => handleCheckInChange(date)}
+                        selectsStart
+                        startDate={parseStringToLocalDate(
+                          bookingDates.check_in_date,
+                        )}
+                        endDate={parseStringToLocalDate(
+                          bookingDates.check_out_date,
+                        )}
+                        minDate={new Date()}
+                        placeholderText="Select check-in date"
+                        className="form-control"
+                        dateFormat="yyyy-MM-dd"
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Check-Out Date
+                      </label>
+                      <DatePicker
+                        selected={parseStringToLocalDate(
+                          bookingDates.check_out_date,
+                        )}
+                        onChange={(date) =>
+                          setBookingDates((prev) => ({
+                            ...prev,
+                            check_out_date: formatDateToYYYYMMDD(date),
+                          }))
+                        }
+                        selectsEnd
+                        startDate={parseStringToLocalDate(
+                          bookingDates.check_in_date,
+                        )}
+                        endDate={parseStringToLocalDate(
+                          bookingDates.check_out_date,
+                        )}
+                        minDate={
+                          parseStringToLocalDate(bookingDates.check_in_date) ||
+                          new Date()
+                        }
+                        placeholderText="Select check-out date"
+                        className="form-control"
+                        dateFormat="yyyy-MM-dd"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <hr />
+
+                  {/* 2. Guest Registration Type */}
+                  <h6 className="fw-bold mb-3 text-secondary">
+                    2. Guest Information
+                  </h6>
+                  <div className="mb-3">
+                    <div className="form-check form-check-inline me-4">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="guestType"
+                        id="newGuest"
+                        checked={isNewGuest}
+                        onChange={() => setIsNewGuest(true)}
+                      />
+                      <label
+                        className="form-check-label fw-semibold"
+                        htmlFor="newGuest"
+                      >
+                        New Guest Registration
+                      </label>
+                    </div>
+                    <div className="form-check form-check-inline">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="guestType"
+                        id="existingGuest"
+                        checked={!isNewGuest}
+                        onChange={() => setIsNewGuest(false)}
+                      />
+                      <label
+                        className="form-check-label fw-semibold"
+                        htmlFor="existingGuest"
+                      >
+                        Select Existing Guest
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 3. Guest Details Input */}
+                  {isNewGuest ? (
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <label className="form-label">First Name</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={walkInGuestData.first_name}
+                          onChange={(e) =>
+                            setWalkInGuestData((prev) => ({
+                              ...prev,
+                              first_name: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Last Name</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={walkInGuestData.last_name}
+                          onChange={(e) =>
+                            setWalkInGuestData((prev) => ({
+                              ...prev,
+                              last_name: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Email</label>
+                        <input
+                          type="email"
+                          className="form-control"
+                          value={walkInGuestData.email}
+                          onChange={(e) =>
+                            setWalkInGuestData((prev) => ({
+                              ...prev,
+                              email: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Phone Number</label>
+                        <input
+                          type="tel"
+                          className="form-control"
+                          value={walkInGuestData.phone_number}
+                          onChange={(e) =>
+                            setWalkInGuestData((prev) => ({
+                              ...prev,
+                              phone_number: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label">
+                          ID / Passport Document Number
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={walkInGuestData.id_document}
+                          onChange={(e) =>
+                            setWalkInGuestData((prev) => ({
+                              ...prev,
+                              id_document: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-3">
+                      <label className="form-label">Select Guest</label>
+                      <select
+                        className="form-select"
+                        value={selectedGuestId}
+                        onChange={(e) => setSelectedGuestId(e.target.value)}
+                        required={!isNewGuest}
+                      >
+                        <option value="">
+                          -- Choose a registered guest --
+                        </option>
+                        {existingGuests.map((guest) => (
+                          <option key={guest.guest_id} value={guest.guest_id}>
+                            {guest.first_name} {guest.last_name} ({guest.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer bg-light">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setSelectedRoomForBooking(null)}
+                    disabled={bookingSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={bookingSubmitting}
+                  >
+                    {bookingSubmitting ? "Processing..." : "Confirm Booking"}
                   </button>
                 </div>
               </form>

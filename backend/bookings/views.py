@@ -10,6 +10,7 @@ from rest_framework.exceptions import ValidationError
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Hotel, Rooms, Guests, Bookings
 
