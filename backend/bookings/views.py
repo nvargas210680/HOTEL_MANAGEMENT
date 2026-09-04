@@ -112,8 +112,8 @@ class BookingViewSet(viewsets.ModelViewSet):
         check_out = serializer.validated_data['check_out_date']
         
         # 1. Check if an admin is passing an explicit guest ID for a walk-in
-        target_guest_id = self.request.data.get('guest')
-        
+        target_guest_id = self.request.data.get('guest') or self.request.data.get('guest_id')
+
         if self.request.user.is_staff and target_guest_id:
             try:
                 guest_instance = Guests.objects.get(pk=target_guest_id)
