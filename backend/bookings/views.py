@@ -106,18 +106,29 @@ class BookingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        print("REQUEST DATA:", self.request.data)
         room = serializer.validated_data['room']
         check_in = serializer.validated_data['check_in_date']
         check_out = serializer.validated_data['check_out_date']
-
-        guest_instance, _ = Guests.objects.get_or_create(
-            user=self.request.user,
-            defaults={
-                'first_name': self.request.user.first_name or self.request.user.username,
-                'last_name': self.request.user.last_name or '',
-                'email': self.request.user.email or ''
-            }
-        )
+        
+        # 1. Check if an admin is passing an explicit guest ID for a walk-in
+        target_guest_id = self.request.data.get('guest')
+        
+        if self.request.user.is_staff and target_guest_id:
+            try:
+                guest_instance = Guests.objects.get(pk=target_guest_id)
+            except Guests.DoesNotExist:
+                raise ValidationError({"guest": "The specified guest does not exist."})
+        else:
+            # 2. Fall back to standard user-to-guest mapping for regular customers
+            guest_instance, _ = Guests.objects.get_or_create(
+                user=self.request.user,
+                defaults={
+                    'first_name': self.request.user.first_name or self.request.user.username,
+                    'last_name': self.request.user.last_name or '',
+                    'email': self.request.user.email or ''
+                }
+            )
 
         nights = (check_out - check_in).days
         total_price = nights * getattr(room, 'price', getattr(room, 'price_per_night', 0))
@@ -132,16 +143,3 @@ class BookingViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 "error": "This room is already booked for the selected dates. Please choose different dates."
             })
-
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
-    def booked_dates(self, request):
-        room_id = request.query_params.get('room_id')
-        if not room_id:
-            return Response({"error": "room_id query parameter is required"}, status=400)
-
-        bookings = Bookings.objects.filter(
-            room_id=room_id, 
-            status='Confirmed'
-        ).values('check_in_date', 'check_out_date')
-
-        return Response(list(bookings))
