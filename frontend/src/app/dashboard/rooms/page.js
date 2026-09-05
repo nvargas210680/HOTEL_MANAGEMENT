@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { apiFetch } from "@/utils/api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -16,12 +16,12 @@ export default function RoomsPage() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   const [selectedPicture, setSelectedPicture] = useState(null);
-
   const [showModal, setShowModal] = useState(false);
 
   // --- WALK-IN BOOKING STATE ---
   const [selectedRoomForBooking, setSelectedRoomForBooking] = useState(null);
   const [existingGuests, setExistingGuests] = useState([]);
+  const [existingBookings, setExistingBookings] = useState([]);
   const [isNewGuest, setIsNewGuest] = useState(true);
   const [selectedGuestId, setSelectedGuestId] = useState("");
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
@@ -33,7 +33,6 @@ export default function RoomsPage() {
     return new Date(year, month - 1, day);
   };
 
-  // Helper to format Date object to "YYYY-MM-DD" string
   const formatDateToYYYYMMDD = (date) => {
     if (!date) return "";
     const year = date.getFullYear();
@@ -59,23 +58,6 @@ export default function RoomsPage() {
     check_out_date: tomorrowStr,
   });
 
-  // Fetch guests list when walk-in modal opens
-  useEffect(() => {
-    if (selectedRoomForBooking) {
-      const fetchGuests = async () => {
-        try {
-          const response = await apiFetch("/api/guests/");
-          if (response.ok) {
-            const data = await response.json();
-            setExistingGuests(data);
-          }
-        } catch (err) {
-          console.error("Failed to load guests:", err);
-        }
-      };
-      fetchGuests();
-    }
-  }, [selectedRoomForBooking]);
   const [submitting, setSubmitting] = useState(false);
   const [newRoom, setNewRoom] = useState({
     room_number: "",
@@ -86,19 +68,7 @@ export default function RoomsPage() {
     status: "Available",
   });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewRoom((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  useEffect(() => {
-    fetchRooms();
-  }, []);
-
-  const fetchRooms = async () => {
+  const fetchRooms = useCallback(async () => {
     try {
       const response = await apiFetch("/api/rooms/");
       if (!response.ok) {
@@ -111,6 +81,79 @@ export default function RoomsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
+
+  // Fetch guests and room's existing bookings when walk-in modal opens
+  useEffect(() => {
+    let isMounted = true;
+
+    if (selectedRoomForBooking) {
+      const fetchGuests = async () => {
+        try {
+          const response = await apiFetch("/api/guests/");
+          if (response.ok && isMounted) {
+            const data = await response.json();
+            setExistingGuests(data);
+          }
+        } catch (err) {
+          console.error("Failed to load guests:", err);
+        }
+      };
+
+      const fetchRoomBookings = async () => {
+        try {
+          const response = await apiFetch(
+            `/api/bookings/?room=${selectedRoomForBooking.room_id}`
+          );
+          if (response.ok && isMounted) {
+            const data = await response.json();
+            setExistingBookings(data);
+          }
+        } catch (err) {
+          console.error("Failed to load room bookings:", err);
+        }
+      };
+
+      fetchGuests();
+      fetchRoomBookings();
+    } else {
+      setExistingBookings([]);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedRoomForBooking]);
+
+  // Convert active bookings into Date intervals to disable in react-datepicker
+  const excludedIntervals = useMemo(() => {
+    return existingBookings
+      .filter((b) => b.status !== "Cancelled" && b.status !== "Checked Out")
+      .map((b) => {
+        const start = parseStringToLocalDate(b.check_in_date);
+        const end = parseStringToLocalDate(b.check_out_date);
+
+        const dayBeforeCheckOut = new Date(end);
+        dayBeforeCheckOut.setDate(dayBeforeCheckOut.getDate() - 1);
+
+        return {
+          start,
+          end: dayBeforeCheckOut >= start ? dayBeforeCheckOut : start,
+        };
+      })
+      .filter((i) => i.start && i.end);
+  }, [existingBookings]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewRoom((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleStatusChange = async (roomId, newStatus) => {
@@ -127,8 +170,8 @@ export default function RoomsPage() {
 
       setRooms((prev) =>
         prev.map((r) =>
-          r.room_id === roomId ? { ...r, status: newStatus } : r,
-        ),
+          r.room_id === roomId ? { ...r, status: newStatus } : r
+        )
       );
     } catch (err) {
       alert(`Could not update status: ${err.message}`);
@@ -141,10 +184,9 @@ export default function RoomsPage() {
   const handleAddRoomSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setFormError(null); // Clear previous errors
+    setFormError(null);
 
     try {
-      // 1. Build the FormData object
       const formData = new FormData();
       formData.append("room_number", newRoom.room_number);
       formData.append("bed_count", parseInt(newRoom.bed_count, 10));
@@ -153,12 +195,10 @@ export default function RoomsPage() {
       formData.append("price_per_night", parseFloat(newRoom.price_per_night));
       formData.append("status", newRoom.status);
 
-      // 2. Attach the image file if selected
       if (selectedPicture) {
         formData.append("picture", selectedPicture);
       }
 
-      // 3. Pass formData as the body
       const response = await apiFetch("/api/rooms/", {
         method: "POST",
         body: formData,
@@ -166,8 +206,6 @@ export default function RoomsPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-
-        // Check if Django returned a specific field validation error
         if (errorData.room_number) {
           throw new Error(`Room Number ${newRoom.room_number} already exists.`);
         } else if (errorData.detail) {
@@ -179,10 +217,9 @@ export default function RoomsPage() {
 
       const createdRoom = await response.json();
 
-      // Reset form, clear selected file, and close modal on success
       setRooms((prev) => [createdRoom, ...prev]);
       setShowModal(false);
-      setSelectedPicture(null); // Reset file selection
+      setSelectedPicture(null);
       setNewRoom({
         room_number: "",
         bed_count: 1,
@@ -192,11 +229,12 @@ export default function RoomsPage() {
         status: "Available",
       });
     } catch (err) {
-      setFormError(err.message); // Show error inside the modal
+      setFormError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
+
   const filteredRooms = useMemo(() => {
     return rooms.filter((r) => {
       const matchesSearch =
@@ -211,6 +249,7 @@ export default function RoomsPage() {
       return matchesSearch && matchesStatus;
     });
   }, [rooms, searchTerm, statusFilter]);
+
   const handleWalkInSubmit = async (e) => {
     e.preventDefault();
     setBookingSubmitting(true);
@@ -220,18 +259,16 @@ export default function RoomsPage() {
       let targetGuestId = selectedGuestId;
 
       if (isNewGuest) {
-        // Build payload matching RegisterSerializer expected fields
         const registerPayload = {
-          username: walkInGuestData.email, // Or use id_document / custom string
+          username: walkInGuestData.email,
           email: walkInGuestData.email,
-          password: `WalkIn_${Math.random().toString(36).slice(-8)}!`, // Temporary auto-generated password
+          password: `WalkIn_${Math.random().toString(36).slice(-8)}!`,
           first_name: walkInGuestData.first_name,
           last_name: walkInGuestData.last_name,
           phone_number: walkInGuestData.phone_number,
           id_document: walkInGuestData.id_document,
         };
 
-        // Call your registration endpoint (e.g., /api/register/ or /api/users/register/)
         const regResponse = await apiFetch("/api/register/", {
           method: "POST",
           body: JSON.stringify(registerPayload),
@@ -242,16 +279,15 @@ export default function RoomsPage() {
           throw new Error(
             errData.detail ||
               JSON.stringify(errData) ||
-              "Failed to register new walk-in guest account.",
+              "Failed to register new walk-in guest account."
           );
         }
 
-        // Fetch the updated guest list to get the newly created guest_id
         const guestsResponse = await apiFetch("/api/guests/");
         if (guestsResponse.ok) {
           const guestsList = await guestsResponse.json();
           const createdGuest = guestsList.find(
-            (g) => g.email === walkInGuestData.email,
+            (g) => g.email === walkInGuestData.email
           );
           if (createdGuest) {
             targetGuestId = createdGuest.guest_id;
@@ -263,7 +299,6 @@ export default function RoomsPage() {
         throw new Error("Could not determine valid guest ID for this booking.");
       }
 
-      // Submit booking with valid guest ID
       const bookingPayload = {
         room: selectedRoomForBooking.room_id,
         guest_id: targetGuestId,
@@ -279,12 +314,12 @@ export default function RoomsPage() {
       if (!bookingResponse.ok) {
         const errData = await bookingResponse.json().catch(() => ({}));
         throw new Error(
-          errData.error || errData.detail || "Failed to create booking.",
+          errData.error || errData.detail || "Failed to create booking."
         );
       }
 
-      // Reset form and close modal
       setSelectedRoomForBooking(null);
+      setSelectedGuestId("");
       setWalkInGuestData({
         first_name: "",
         last_name: "",
@@ -299,32 +334,21 @@ export default function RoomsPage() {
       setBookingSubmitting(false);
     }
   };
-  // Example helper to construct exclude intervals from existing room bookings
-  const excludeIntervals = useMemo(() => {
-    if (!selectedRoomForBooking?.existing_bookings) return [];
-
-    return selectedRoomForBooking.existing_bookings.map((b) => ({
-      start: parseStringToLocalDate(b.check_in_date),
-      end: parseStringToLocalDate(b.check_out_date),
-    }));
-  }, [selectedRoomForBooking]);
 
   const handleCheckInChange = (date) => {
+    if (!date) return;
     const newInStr =
       typeof date === "string" ? date : formatDateToYYYYMMDD(date);
-    const nextDay = new Date(new Date(newInStr).getTime() + 86400000);
+    const parsedInDate = parseStringToLocalDate(newInStr);
+    const nextDay = new Date(parsedInDate.getTime() + 86400000);
     const nextDayStr = formatDateToYYYYMMDD(nextDay);
 
-    // 3. Compare with current check-out date
     if (newInStr >= bookingDates.check_out_date) {
-      // Check-in caught up to or passed check-out -> bump check-out to next day
-      setBookingDates((prev) => ({
-        ...prev,
+      setBookingDates({
         check_in_date: newInStr,
         check_out_date: nextDayStr,
-      }));
+      });
     } else {
-      // Normal update: just change check_in_date
       setBookingDates((prev) => ({
         ...prev,
         check_in_date: newInStr,
@@ -436,14 +460,13 @@ export default function RoomsPage() {
                               r.status === "Available"
                                 ? "bg-success"
                                 : r.status === "Occupied"
-                                  ? "bg-danger"
-                                  : "bg-warning text-dark"
+                                ? "bg-danger"
+                                : "bg-warning text-dark"
                             }`}
                           >
                             {r.status || "Available"}
                           </span>
                         </td>
-                        {/* CLEANED UP SINGLE ACTIONS COLUMN */}
                         <td className="text-end pe-3">
                           {r?.status?.toLowerCase() === "available" && (
                             <button
@@ -531,7 +554,9 @@ export default function RoomsPage() {
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Bed Type</label>
+                      <label className="form-label fw-semibold">
+                        Bed Type
+                      </label>
                       <select
                         className="form-select"
                         name="bed_type"
@@ -631,7 +656,7 @@ export default function RoomsPage() {
         </div>
       )}
 
-      {/* WALK-IN BOOKING MODAL (UN-NESTED & COMPLETE) */}
+      {/* WALK-IN BOOKING MODAL */}
       {selectedRoomForBooking && (
         <div
           className="modal fade show d-block"
@@ -657,7 +682,6 @@ export default function RoomsPage() {
                   )}
 
                   {/* 1. Stay Dates */}
-                  {/* --- 1. DATES SELECTION (react-datepicker) --- */}
                   <h6 className="fw-bold mb-3 text-secondary">1. Stay Dates</h6>
                   <div className="row g-3 mb-4">
                     <div className="col-md-6">
@@ -666,16 +690,17 @@ export default function RoomsPage() {
                       </label>
                       <DatePicker
                         selected={parseStringToLocalDate(
-                          bookingDates.check_in_date,
+                          bookingDates.check_in_date
                         )}
                         onChange={(date) => handleCheckInChange(date)}
                         selectsStart
                         startDate={parseStringToLocalDate(
-                          bookingDates.check_in_date,
+                          bookingDates.check_in_date
                         )}
                         endDate={parseStringToLocalDate(
-                          bookingDates.check_out_date,
+                          bookingDates.check_out_date
                         )}
+                        excludeDateIntervals={excludedIntervals}
                         minDate={new Date()}
                         placeholderText="Select check-in date"
                         className="form-control"
@@ -689,7 +714,7 @@ export default function RoomsPage() {
                       </label>
                       <DatePicker
                         selected={parseStringToLocalDate(
-                          bookingDates.check_out_date,
+                          bookingDates.check_out_date
                         )}
                         onChange={(date) =>
                           setBookingDates((prev) => ({
@@ -699,11 +724,12 @@ export default function RoomsPage() {
                         }
                         selectsEnd
                         startDate={parseStringToLocalDate(
-                          bookingDates.check_in_date,
+                          bookingDates.check_in_date
                         )}
                         endDate={parseStringToLocalDate(
-                          bookingDates.check_out_date,
+                          bookingDates.check_out_date
                         )}
+                        excludeDateIntervals={excludedIntervals}
                         minDate={
                           parseStringToLocalDate(bookingDates.check_in_date) ||
                           new Date()
@@ -718,7 +744,7 @@ export default function RoomsPage() {
 
                   <hr />
 
-                  {/* 2. Guest Registration Type */}
+                  {/* 2. Guest Information */}
                   <h6 className="fw-bold mb-3 text-secondary">
                     2. Guest Information
                   </h6>
@@ -846,9 +872,7 @@ export default function RoomsPage() {
                         onChange={(e) => setSelectedGuestId(e.target.value)}
                         required={!isNewGuest}
                       >
-                        <option value="">
-                          -- Choose a registered guest --
-                        </option>
+                        <option value="">-- Choose Existing Guest --</option>
                         {existingGuests.map((guest) => (
                           <option key={guest.guest_id} value={guest.guest_id}>
                             {guest.first_name} {guest.last_name} ({guest.email})
@@ -858,12 +882,13 @@ export default function RoomsPage() {
                     </div>
                   )}
                 </div>
+
                 <div className="modal-footer bg-light">
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => setSelectedRoomForBooking(null)}
                     disabled={bookingSubmitting}
+                    onClick={() => setSelectedRoomForBooking(null)}
                   >
                     Cancel
                   </button>
@@ -872,7 +897,7 @@ export default function RoomsPage() {
                     className="btn btn-primary"
                     disabled={bookingSubmitting}
                   >
-                    {bookingSubmitting ? "Processing..." : "Confirm Booking"}
+                    {bookingSubmitting ? "Processing..." : "Confirm Walk-In Booking"}
                   </button>
                 </div>
               </form>

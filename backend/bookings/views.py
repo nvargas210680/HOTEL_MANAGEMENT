@@ -1,29 +1,42 @@
-from django.shortcuts import render
+# Django imports
 from django.contrib.auth.models import User
 from django.db import IntegrityError
+from django.shortcuts import render
+# Django imports
+from django.contrib.auth.models import User
+from django.db import IntegrityError
+from django.shortcuts import render
 
-from rest_framework import viewsets, generics, permissions, status
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser
+# REST Framework imports
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import (
+    AllowAny,
+    IsAdminUser,
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+# Third-party library imports
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import Hotel, Rooms, Guests, Bookings
-
+# Local app imports
+from .models import Bookings, Guests, Hotel, Rooms
 from .serializers import (
-    HotelSerializer, 
-    RoomsSerializer, 
-    GuestsSerializer, 
-    RegisterSerializer,
+    AdminBookingSerializer,
     BookingSerializer,
-    AdminBookingSerializer
+    GuestsSerializer,
+    HotelSerializer,
+    RegisterSerializer,
+    RoomsSerializer,
+    UserProfileSerializer,
 )
 
-# --- ADMIN BOOKING VIEWS ---
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -101,34 +114,55 @@ class GuestsViewSet(viewsets.ModelViewSet):
         return Guests.objects.filter(user=self.request.user)
 
 class BookingViewSet(viewsets.ModelViewSet):
-    queryset = Bookings.objects.all()
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        
+        # Staff can see all bookings
+        if user.is_staff or user.is_superuser:
+            return Bookings.objects.all()
+        
+        # Regular users only see bookings linked to their Guest profile
+        return Bookings.objects.filter(guest__user=user)
+
     def perform_create(self, serializer):
-        print("REQUEST DATA:", self.request.data)
         room = serializer.validated_data['room']
         check_in = serializer.validated_data['check_in_date']
         check_out = serializer.validated_data['check_out_date']
-        
-        # 1. Check if an admin is passing an explicit guest ID for a walk-in
+
         target_guest_id = self.request.data.get('guest') or self.request.data.get('guest_id')
 
-        if self.request.user.is_staff and target_guest_id:
-            try:
-                guest_instance = Guests.objects.get(pk=target_guest_id)
-            except Guests.DoesNotExist:
-                raise ValidationError({"guest": "The specified guest does not exist."})
+        if self.request.user.is_staff:
+            if target_guest_id:
+                # 1. Staff attaching an existing guest record
+                try:
+                    guest_instance = Guests.objects.get(pk=target_guest_id)
+                except Guests.DoesNotExist:
+                    raise ValidationError({"guest": "The specified guest does not exist."})
+            else:
+                # 2. Staff creating a new walk-in guest on the fly without a User account
+                guest_email = self.request.data.get('email')
+                if not guest_email:
+                    raise ValidationError({"email": "Email is required to record a walk-in booking."})
+
+                guest_instance, _ = Guests.objects.get_or_create(
+                    email=guest_email,
+                    defaults={
+                        'user': None,  # Decoupled from User account
+                        'first_name': self.request.data.get('first_name', 'Walk-in'),
+                        'last_name': self.request.data.get('last_name', 'Guest'),
+                        'phone_number': self.request.data.get('phone_number', ''),
+                        'id_document': self.request.data.get('id_document', '')
+                    }
+                )
         else:
-            # 2. Fall back to standard user-to-guest mapping for regular customers
-            guest_instance, _ = Guests.objects.get_or_create(
-                user=self.request.user,
-                defaults={
-                    'first_name': self.request.user.first_name or self.request.user.username,
-                    'last_name': self.request.user.last_name or '',
-                    'email': self.request.user.email or ''
-                }
-            )
+            # 3. Standard online booking for logged-in users
+            try:
+                guest_instance = Guests.objects.get(user=self.request.user)
+            except Guests.DoesNotExist:
+                raise ValidationError({"detail": "No guest profile found for this user account."})
 
         nights = (check_out - check_in).days
         total_price = nights * getattr(room, 'price', getattr(room, 'price_per_night', 0))
@@ -143,3 +177,26 @@ class BookingViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 "error": "This room is already booked for the selected dates. Please choose different dates."
             })
+            
+            
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        serializer = UserProfileSerializer(
+            request.user, 
+            data=request.data, 
+            partial=True, 
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            
+            

@@ -15,6 +15,9 @@ export default function GuestLayout({ children }) {
           <Link href="/my-bookings" className="nav-link">
             My Bookings
           </Link>
+          <Link href="/profile" className="nav-link">
+            My Profile
+          </Link>
           {/* Logout button or user dropdown */}
         </div>
       </header>

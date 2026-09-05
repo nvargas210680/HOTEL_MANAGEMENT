@@ -136,9 +136,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# --- REST FRAMEWORK SETTINGS ---
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
 
@@ -147,30 +151,11 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-from datetime import timedelta
-
 SIMPLE_JWT = {
-    # How long the short-lived access token lasts before expiring
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    
-    # How long the refresh token lasts (used to grab a new access token silently)
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    
-    # Automatically rotate refresh tokens when a new one is requested
     'ROTATE_REFRESH_TOKENS': True,
-    
-    # Blacklist the old refresh tokens so they can't be reused maliciously
     'BLACKLIST_AFTER_ROTATION': True,
-}
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',  # <-- Add this line
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
 }
 
 MEDIA_URL = '/media/'
