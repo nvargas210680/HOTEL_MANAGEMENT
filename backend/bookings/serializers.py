@@ -12,6 +12,8 @@ class UserSerializer(serializers.ModelSerializer):
 class AdminBookingSerializer(serializers.ModelSerializer):
     guest_name = serializers.SerializerMethodField()
     guest_email = serializers.ReadOnlyField(source='guest.email')
+    guest_phone = serializers.SerializerMethodField()
+    id_document = serializers.SerializerMethodField()
     room_number = serializers.ReadOnlyField(source='room.room_number')
 
     class Meta:
@@ -20,6 +22,8 @@ class AdminBookingSerializer(serializers.ModelSerializer):
             'booking_id',
             'guest_name',
             'guest_email',
+            'guest_phone',
+            'id_document',
             'room_number',
             'check_in_date',
             'check_out_date',
@@ -31,6 +35,12 @@ class AdminBookingSerializer(serializers.ModelSerializer):
         if obj.guest:
             return f"{obj.guest.first_name} {obj.guest.last_name}".strip()
         return "Unknown Guest"
+
+    def get_guest_phone(self, obj):
+        return obj.guest.phone_number if obj.guest else ""
+
+    def get_id_document(self, obj):
+        return obj.guest.id_document if obj.guest else ""
 
 
 class HotelSerializer(serializers.ModelSerializer):
