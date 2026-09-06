@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
+    confirm_password: "",
     first_name: "",
     last_name: "",
     email: "",
@@ -28,6 +29,12 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMsg("");
 
+    // Check if passwords match before sending to backend
+    if (formData.password !== formData.confirm_password) {
+      setErrorMsg("Passwords do not match.");
+      return;
+    }
+
     try {
       const response = await fetch("http://127.0.0.1:8000/api/register/", {
         method: "POST",
@@ -45,7 +52,7 @@ export default function RegisterPage() {
         router.push("/login");
       } else {
         setErrorMsg(
-          data.detail || "Registration failed. Please check your details.",
+          data.detail || data.confirm_password || "Registration failed. Please check your details.",
         );
       }
     } catch (error) {
@@ -142,6 +149,20 @@ export default function RegisterPage() {
               required
             />
           </div>
+
+          <div className="mb-3">
+            <label className="form-label fw-semibold">Confirm Password</label>
+            <input
+              type="password"
+              name="confirm_password"
+              className="form-control"
+              placeholder="Re-enter password"
+              value={formData.confirm_password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
           {/* Phone Number & ID Document Row */}
           <div className="row">
             <div className="col-md-6 mb-3">

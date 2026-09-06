@@ -85,13 +85,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     id_document = serializers.CharField(write_only=True, required=False, allow_blank=True)
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True) # Added here
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'first_name', 'last_name', 'phone_number', 'id_document']
+        fields = ['username', 'email', 'password', 'confirm_password', 'first_name', 'last_name', 'phone_number', 'id_document']
         extra_kwargs = {'password': {'write_only': True}}
 
+    def validate(self, data):
+        # Check if password and confirm_password match
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords must match."})
+        return data
+
     def create(self, validated_data):
+        # Pop out confirm_password so it's not passed to User creation
+        validated_data.pop('confirm_password')
+        
         phone_number = validated_data.pop('phone_number', '')
         id_document = validated_data.pop('id_document', '')
         first_name = validated_data.pop('first_name')

@@ -8,7 +8,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
-# Local application views
+# Local application views (Include password reset views here!)
 from bookings.views import (
     BookingViewSet,
     CustomTokenObtainPairView,
@@ -17,6 +17,8 @@ from bookings.views import (
     ProfileView,
     RegisterView,
     RoomsViewSet,
+    PasswordResetRequestView,   # Added here
+    PasswordResetConfirmView,   # Added here
     admin_booking_detail,
     admin_booking_list,
 )
@@ -29,6 +31,7 @@ router.register(r'guests', GuestsViewSet)
 router.register(r'bookings', BookingViewSet, basename='booking')
 
 # URL Patterns
+# URL Patterns
 urlpatterns = [
     # Admin Interface
     path('admin/', admin.site.urls),
@@ -38,6 +41,8 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', RegisterView.as_view(), name='auth_register'),
     path('api/profile/', ProfileView.as_view(), name='user-profile'),
+    path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('api/password-reset-confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 
     # Custom Admin Booking Endpoints
     path('api/admin/bookings/', admin_booking_list, name='admin-booking-list'),

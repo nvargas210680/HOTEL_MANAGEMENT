@@ -63,8 +63,7 @@ export default function LoginPage() {
           router.push("/rooms");
         }
       } else {
-    
-        setErrorMessage('Invalid username or password.');
+        setErrorMessage("Invalid username or password.");
       }
     } catch (error) {
       console.error("Network error connecting to Django:", error);
@@ -109,10 +108,18 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
             {errorMessage && (
-              <div className="alert alert-danger" role="alert">
+              <div className="alert alert-danger mt-2" role="alert">
                 {errorMessage}
               </div>
             )}
+            <div className="text-end mt-2">
+              <Link
+                href="/auth/forgot-password"
+                className="text-decoration-none small text-muted"
+              >
+                Forgot your password?
+              </Link>
+            </div>
           </div>
           <button className="btn btn-primary w-100 mt-2">Login</button>
           <div className="text-center mt-3">
