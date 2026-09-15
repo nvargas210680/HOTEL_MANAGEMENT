@@ -107,7 +107,7 @@ export default function RoomsPage() {
       const fetchRoomBookings = async () => {
         try {
           const response = await apiFetch(
-            `/api/bookings/?room=${selectedRoomForBooking.room_id}`
+            `/api/bookings/?room=${selectedRoomForBooking.room_id}`,
           );
           if (response.ok && isMounted) {
             const data = await response.json();
@@ -170,8 +170,8 @@ export default function RoomsPage() {
 
       setRooms((prev) =>
         prev.map((r) =>
-          r.room_id === roomId ? { ...r, status: newStatus } : r
-        )
+          r.room_id === roomId ? { ...r, status: newStatus } : r,
+        ),
       );
     } catch (err) {
       alert(`Could not update status: ${err.message}`);
@@ -259,10 +259,13 @@ export default function RoomsPage() {
       let targetGuestId = selectedGuestId;
 
       if (isNewGuest) {
+        const generatedPassword = `WalkIn_${Math.random().toString(36).slice(-8)}!`;
+
         const registerPayload = {
           username: walkInGuestData.email,
           email: walkInGuestData.email,
-          password: `WalkIn_${Math.random().toString(36).slice(-8)}!`,
+          password: generatedPassword,
+          confirm_password: generatedPassword, // Add this line to satisfy the backend validator
           first_name: walkInGuestData.first_name,
           last_name: walkInGuestData.last_name,
           phone_number: walkInGuestData.phone_number,
@@ -279,7 +282,7 @@ export default function RoomsPage() {
           throw new Error(
             errData.detail ||
               JSON.stringify(errData) ||
-              "Failed to register new walk-in guest account."
+              "Failed to register new walk-in guest account.",
           );
         }
 
@@ -287,7 +290,7 @@ export default function RoomsPage() {
         if (guestsResponse.ok) {
           const guestsList = await guestsResponse.json();
           const createdGuest = guestsList.find(
-            (g) => g.email === walkInGuestData.email
+            (g) => g.email === walkInGuestData.email,
           );
           if (createdGuest) {
             targetGuestId = createdGuest.guest_id;
@@ -314,7 +317,7 @@ export default function RoomsPage() {
       if (!bookingResponse.ok) {
         const errData = await bookingResponse.json().catch(() => ({}));
         throw new Error(
-          errData.error || errData.detail || "Failed to create booking."
+          errData.error || errData.detail || "Failed to create booking.",
         );
       }
 
@@ -361,7 +364,7 @@ export default function RoomsPage() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h1 className="h3 mb-0">Rooms Inventory</h1>
-          <p className="text-muted small mb-0">
+          <p className="text-secondary small mb-0">
             Monitor inventory status and pricing details
           </p>
         </div>
@@ -423,8 +426,8 @@ export default function RoomsPage() {
           </div>
           <div className="card-body p-0">
             <div className="table-responsive">
-              <table className="table table-hover table-striped align-middle mb-0">
-                <thead className="table-dark">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light text-uppercase fs-7 text-secondary">
                   <tr>
                     <th>Room #</th>
                     <th>Bed Configuration</th>
@@ -449,7 +452,7 @@ export default function RoomsPage() {
                           {r.bed_count} x {r.bed_type}
                         </td>
                         <td>
-                          <span className="badge bg-light text-dark border">
+                          <span className="badge bg-light text-secondary border">
                             {r.price_type || "Standard"}
                           </span>
                         </td>
@@ -460,8 +463,8 @@ export default function RoomsPage() {
                               r.status === "Available"
                                 ? "bg-success"
                                 : r.status === "Occupied"
-                                ? "bg-danger"
-                                : "bg-warning text-dark"
+                                  ? "bg-danger"
+                                  : "bg-warning text-dark"
                             }`}
                           >
                             {r.status || "Available"}
@@ -554,9 +557,7 @@ export default function RoomsPage() {
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">
-                        Bed Type
-                      </label>
+                      <label className="form-label fw-semibold">Bed Type</label>
                       <select
                         className="form-select"
                         name="bed_type"
@@ -690,15 +691,15 @@ export default function RoomsPage() {
                       </label>
                       <DatePicker
                         selected={parseStringToLocalDate(
-                          bookingDates.check_in_date
+                          bookingDates.check_in_date,
                         )}
                         onChange={(date) => handleCheckInChange(date)}
                         selectsStart
                         startDate={parseStringToLocalDate(
-                          bookingDates.check_in_date
+                          bookingDates.check_in_date,
                         )}
                         endDate={parseStringToLocalDate(
-                          bookingDates.check_out_date
+                          bookingDates.check_out_date,
                         )}
                         excludeDateIntervals={excludedIntervals}
                         minDate={new Date()}
@@ -714,7 +715,7 @@ export default function RoomsPage() {
                       </label>
                       <DatePicker
                         selected={parseStringToLocalDate(
-                          bookingDates.check_out_date
+                          bookingDates.check_out_date,
                         )}
                         onChange={(date) =>
                           setBookingDates((prev) => ({
@@ -724,10 +725,10 @@ export default function RoomsPage() {
                         }
                         selectsEnd
                         startDate={parseStringToLocalDate(
-                          bookingDates.check_in_date
+                          bookingDates.check_in_date,
                         )}
                         endDate={parseStringToLocalDate(
-                          bookingDates.check_out_date
+                          bookingDates.check_out_date,
                         )}
                         excludeDateIntervals={excludedIntervals}
                         minDate={
@@ -897,7 +898,9 @@ export default function RoomsPage() {
                     className="btn btn-primary"
                     disabled={bookingSubmitting}
                   >
-                    {bookingSubmitting ? "Processing..." : "Confirm Walk-In Booking"}
+                    {bookingSubmitting
+                      ? "Processing..."
+                      : "Confirm Walk-In Booking"}
                   </button>
                 </div>
               </form>

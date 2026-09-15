@@ -189,7 +189,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'phone_number', 'id_document']
+        fields = ['first_name', 'last_name', 'username', 'email', 'phone_number', 'id_document']
         read_only_fields = ['email']
 
     def get_phone_number(self, obj):
@@ -208,6 +208,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # 1. Update User basic information
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.username = validated_data.get('username', instance.username)
         instance.save()
 
         # 2. Get incoming raw data for guest specific fields
