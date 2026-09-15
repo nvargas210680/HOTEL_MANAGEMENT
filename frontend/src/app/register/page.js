@@ -29,7 +29,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    // Check if passwords match before sending to backend
     if (formData.password !== formData.confirm_password) {
       setErrorMsg("Passwords do not match.");
       return;
@@ -52,7 +51,9 @@ export default function RegisterPage() {
         router.push("/login");
       } else {
         setErrorMsg(
-          data.detail || data.confirm_password || "Registration failed. Please check your details.",
+          data.detail ||
+            data.confirm_password ||
+            "Registration failed. Please check your details.",
         );
       }
     } catch (error) {
@@ -63,8 +64,11 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="min-vh-100 d-flex align-items-center justify-content-center"
+      className="d-flex align-items-center justify-content-center py-4"
       style={{
+        minHeight: "100vh",
+        paddingTop: "90px",
+        paddingBottom: "30px",
         backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/images/hotel_palms.jpg')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -72,8 +76,12 @@ export default function RegisterPage() {
       }}
     >
       <div
-        className="card p-4 shadow-lg text-dark"
-        style={{ width: "100%", maxWidth: "450px" }}
+        className="card p-4 shadow-lg border-0 text-dark"
+        style={{
+          width: "100%",
+          maxWidth: "450px",
+          borderRadius: "16px",
+        }}
       >
         <h2 className="text-center mb-4 fw-bold">Create Guest Account</h2>
 
@@ -97,6 +105,7 @@ export default function RegisterPage() {
                 required
               />
             </div>
+
             <div className="col-md-6 mb-3">
               <label className="form-label fw-semibold">Last Name</label>
               <input
@@ -163,7 +172,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Phone Number & ID Document Row */}
           <div className="row">
             <div className="col-md-6 mb-3">
               <label className="form-label fw-semibold">Phone Number</label>
@@ -177,6 +185,7 @@ export default function RegisterPage() {
                 required
               />
             </div>
+
             <div className="col-md-6 mb-3">
               <label className="form-label fw-semibold">
                 ID / Passport Number
@@ -193,7 +202,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button className="btn btn-primary w-100 mt-2">Register</button>
+          <button className="btn btn-primary w-100 mt-2">Create Account</button>
 
           <div className="text-center mt-3">
             <span className="text-muted small">Already have an account? </span>

@@ -231,26 +231,39 @@ export default function MyBookingsPage() {
   };
 
   return (
-    <div className="container py-5">
+  <div
+    className="min-vh-100 py-5"
+    style={{
+      backgroundImage: `linear-gradient(rgba(10, 10, 10, 0.72), rgba(10, 10, 10, 0.72)), url('/images/hotel_palms.jpg')`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundAttachment: "fixed",
+    }}
+  >
+    <div className="container py-4">
       {/* Header Bar */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="fw-bold mb-1">My Bookings</h1>
-          <p className="text-muted mb-0">
+          <h1 className="fw-bold mb-1 text-white">My Bookings</h1>
+          <p className="text-white-50 mb-0">
             Welcome back{user?.first_name ? `, ${user.first_name}` : ""}! Here
             are your hotel reservations.
           </p>
         </div>
-        <button className="btn btn-outline-danger" onClick={handleLogout}>
+
+        <button
+          className="btn btn-outline-light rounded-pill px-4"
+          onClick={handleLogout}
+        >
           Sign Out
         </button>
       </div>
 
-      <hr className="mb-4" />
+      <hr className="mb-4 border-light opacity-50" />
 
       {loading ? (
         <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status">
+          <div className="spinner-border text-light" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
         </div>
@@ -273,6 +286,7 @@ export default function MyBookingsPage() {
             const checkIn = booking.check_in_date || booking.check_in;
             const checkOut = booking.check_out_date || booking.check_out;
             const status = booking.status || "Confirmed";
+
             const isEditable =
               status !== "Cancelled" &&
               status !== "Checked Out" &&
@@ -294,7 +308,10 @@ export default function MyBookingsPage() {
                       >
                         {status}
                       </span>
-                      <small className="text-muted">ID: #{bookingId}</small>
+
+                      <small className="text-muted">
+                        ID: #{bookingId}
+                      </small>
                     </div>
 
                     <h5 className="card-title fw-bold text-capitalize">
@@ -319,7 +336,10 @@ export default function MyBookingsPage() {
 
                     <div className="border-top pt-2 mt-2">
                       <div className="d-flex justify-content-between align-items-center">
-                        <span className="text-muted small">Nightly Rate:</span>
+                        <span className="text-muted small">
+                          Nightly Rate:
+                        </span>
+
                         <span className="fw-semibold">
                           ${booking.room_details?.price_per_night || 0} / night
                         </span>
@@ -330,6 +350,7 @@ export default function MyBookingsPage() {
                           <span className="text-muted small">
                             Est. Room Total:
                           </span>
+
                           <span className="fw-bold text-dark">
                             ${booking.total_price}*
                           </span>
@@ -355,6 +376,7 @@ export default function MyBookingsPage() {
                           >
                             Modify Dates
                           </button>
+
                           <button
                             className="btn btn-outline-danger btn-sm w-100"
                             onClick={() => handleCancelBooking(bookingId)}
@@ -364,7 +386,7 @@ export default function MyBookingsPage() {
                           </button>
                         </>
                       ) : (
-                        <span className="text-muted small italic w-100 text-center">
+                        <span className="text-muted small fst-italic w-100 text-center">
                           {status === "Cancelled"
                             ? "Booking Cancelled"
                             : "No actions available"}
@@ -392,6 +414,7 @@ export default function MyBookingsPage() {
                 <h5 className="modal-title fw-bold">
                   Modify Reservation Dates
                 </h5>
+
                 <button
                   type="button"
                   className="btn-close"
@@ -411,12 +434,14 @@ export default function MyBookingsPage() {
                       <label className="form-label fw-semibold">
                         Check-In Date
                       </label>
+
                       <DatePicker
                         selected={parseStringToLocalDate(
                           modifyDates.check_in_date,
                         )}
                         onChange={(date) => {
                           const formatted = formatDateToYYYYMMDD(date);
+
                           setModifyDates((prev) => ({
                             ...prev,
                             check_in_date: formatted,
@@ -436,16 +461,19 @@ export default function MyBookingsPage() {
                         required
                       />
                     </div>
+
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">
                         Check-Out Date
                       </label>
+
                       <DatePicker
                         selected={parseStringToLocalDate(
                           modifyDates.check_out_date,
                         )}
                         onChange={(date) => {
                           const formatted = formatDateToYYYYMMDD(date);
+
                           setModifyDates((prev) => ({
                             ...prev,
                             check_out_date: formatted,
@@ -460,8 +488,9 @@ export default function MyBookingsPage() {
                         )}
                         excludeDateIntervals={excludedIntervals}
                         minDate={
-                          parseStringToLocalDate(modifyDates.check_in_date) ||
-                          new Date()
+                          parseStringToLocalDate(
+                            modifyDates.check_in_date,
+                          ) || new Date()
                         }
                         className="form-control"
                         dateFormat="yyyy-MM-dd"
@@ -480,6 +509,7 @@ export default function MyBookingsPage() {
                   >
                     Close
                   </button>
+
                   <button
                     type="submit"
                     className="btn btn-primary fw-bold"
@@ -494,5 +524,6 @@ export default function MyBookingsPage() {
         </div>
       )}
     </div>
-  );
+  </div>
+);
 }
