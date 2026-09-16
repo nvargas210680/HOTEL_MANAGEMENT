@@ -142,12 +142,25 @@ export default function CheckInOutPage() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="h3 mb-0">Check-In & Check-Out Desk</h1>
+          <h1 className="h3 mb-0" style={{ color: "#1e293b" }}>
+            Check-In & Check-Out Desk
+          </h1>
           <p className="text-muted small mb-0">
             Manage guest arrivals, active stays, and departures
           </p>
         </div>
-        <span className="badge bg-primary fs-6">
+        <span
+          className="d-inline-flex align-items-center justify-content-center px-3 py-2 fw-semibold"
+          style={{
+            height: "40px",
+            minWidth: "130px",
+            borderRadius: "8px",
+            backgroundColor: "#f1f5f9",
+            color: "#334155",
+            fontSize: "0.9rem",
+            border: "1px solid #e2e8f0",
+          }}
+        >
           {bookings.length} Total Bookings
         </span>
       </div>
@@ -418,38 +431,48 @@ export default function CheckInOutPage() {
 
                 {/* Line Items Table */}
                 {/* Line Items Table */}
-          <table className="table table-bordered align-middle">
-            <thead className="table-light">
-              <tr>
-                <th>Description</th>
-                <th className="text-center">Rate Type</th>
-                <th className="text-end">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Room Accommodation (Room {selectedInvoice.room_number})</td>
-                <td className="text-center">Standard Stay</td>
-                <td className="text-end">${baseAmount.toFixed(2)}</td>
-              </tr>
-            </tbody>
-            <tbody className="border-top-0">
-              <tr>
-                <td colSpan="2" className="text-end text-muted">Subtotal:</td>
-                <td className="text-end">${baseAmount.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td colSpan="2" className="text-end text-muted">GST (5% - Alberta):</td>
-                <td className="text-end">${gstAmount.toFixed(2)}</td>
-              </tr>
-            </tbody>
-            <tfoot className="table-light">
-              <tr>
-                <td colSpan="2" className="text-end fw-bold">Total Due:</td>
-                <td className="text-end fw-bold text-success fs-5">${grandTotal.toFixed(2)}</td>
-              </tr>
-            </tfoot>
-          </table>
+                <table className="table table-bordered align-middle">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Description</th>
+                      <th className="text-center">Rate Type</th>
+                      <th className="text-end">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        Room Accommodation (Room {selectedInvoice.room_number})
+                      </td>
+                      <td className="text-center">Standard Stay</td>
+                      <td className="text-end">${baseAmount.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                  <tbody className="border-top-0">
+                    <tr>
+                      <td colSpan="2" className="text-end text-muted">
+                        Subtotal:
+                      </td>
+                      <td className="text-end">${baseAmount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan="2" className="text-end text-muted">
+                        GST (5% - Alberta):
+                      </td>
+                      <td className="text-end">${gstAmount.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot className="table-light">
+                    <tr>
+                      <td colSpan="2" className="text-end fw-bold">
+                        Total Due:
+                      </td>
+                      <td className="text-end fw-bold text-success fs-5">
+                        ${grandTotal.toFixed(2)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
 
               {/* Modal Footer Actions */}

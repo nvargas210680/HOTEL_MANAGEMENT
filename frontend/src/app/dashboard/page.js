@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useMemo } from 'react';
-import { apiFetch } from '@/utils/api';
+import { useEffect, useState, useMemo } from "react";
+import { apiFetch } from "@/utils/api";
 
 export default function OverviewPage() {
   const [bookings, setBookings] = useState([]);
@@ -10,8 +10,8 @@ export default function OverviewPage() {
   const [updatingId, setUpdatingId] = useState(null);
 
   // Search & Filter state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     fetchBookings();
@@ -19,7 +19,7 @@ export default function OverviewPage() {
 
   const fetchBookings = async () => {
     try {
-      const response = await apiFetch('/api/admin/bookings/');
+      const response = await apiFetch("/api/admin/bookings/");
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -38,18 +38,18 @@ export default function OverviewPage() {
     setUpdatingId(bookingId);
     try {
       const response = await apiFetch(`/api/admin/bookings/${bookingId}/`, {
-        method: 'PATCH',
+        method: "PATCH",
         body: JSON.stringify({ status: newStatus }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update status');
+        throw new Error("Failed to update status");
       }
 
       setBookings((prev) =>
         prev.map((b) =>
-          b.booking_id === bookingId ? { ...b, status: newStatus } : b
-        )
+          b.booking_id === bookingId ? { ...b, status: newStatus } : b,
+        ),
       );
     } catch (err) {
       alert(`Could not update booking: ${err.message}`);
@@ -66,8 +66,7 @@ export default function OverviewPage() {
         b.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         String(b.booking_id).includes(searchTerm);
 
-      const matchesStatus =
-        statusFilter === 'All' || b.status === statusFilter;
+      const matchesStatus = statusFilter === "All" || b.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -77,10 +76,27 @@ export default function OverviewPage() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="h3 mb-0">Dashboard Overview</h1>
-          <p className="text-muted small mb-0">Manage guest reservations and active status</p>
+          <h1 className="h3 mb-0" style={{ color: "#1e293b" }}>
+            Dashboard Overview
+          </h1>
+          <p className="text-muted small mb-0">
+            Manage guest reservations and active status
+          </p>
         </div>
-        <span className="badge bg-primary fs-6">{bookings.length} Total Bookings</span>
+        <span
+          className="d-inline-flex align-items-center justify-content-center px-3 py-2 fw-semibold"
+          style={{
+            height: "40px",
+            minWidth: "130px",
+            borderRadius: "8px",
+            backgroundColor: "#f1f5f9",
+            color: "#334155",
+            fontSize: "0.9rem",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          {bookings.length} Total Bookings
+        </span>
       </div>
 
       {/* SEARCH AND FILTER BAR */}
@@ -126,10 +142,14 @@ export default function OverviewPage() {
               Showing {filteredBookings.length} of {bookings.length}
             </small>
           </div>
+
           <div className="card-body p-0">
             <div className="table-responsive">
-              <table className="table table-hover table-striped align-middle mb-0">
-                <thead className="table-dark">
+              <table
+                className="table table-hover align-middle mb-0"
+                style={{ fontSize: "0.88rem" }}
+              >
+                <thead className="table-light text-uppercase fs-7 text-secondary">
                   <tr>
                     <th>ID</th>
                     <th>Guest Name</th>
@@ -142,6 +162,7 @@ export default function OverviewPage() {
                     <th className="text-end pe-3">Actions</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {filteredBookings.length === 0 ? (
                     <tr>
@@ -153,29 +174,37 @@ export default function OverviewPage() {
                     filteredBookings.map((b) => (
                       <tr key={b.booking_id}>
                         <td className="fw-bold">#{b.booking_id}</td>
+
                         <td>{b.guest_name}</td>
-                        <td>{b.guest_email || 'N/A'}</td>
+
+                        <td>{b.guest_email || "N/A"}</td>
+
                         <td>
                           <span className="badge bg-secondary">
-                            Room {b.room_number || 'N/A'}
+                            Room {b.room_number || "N/A"}
                           </span>
                         </td>
+
                         <td>{b.check_in_date}</td>
+
                         <td>{b.check_out_date}</td>
+
                         <td>
                           <span
                             className={`badge ${
-                              b.status === 'Confirmed'
-                                ? 'bg-success'
-                                : b.status === 'Cancelled'
-                                ? 'bg-danger'
-                                : 'bg-warning text-dark'
+                              b.status === "Confirmed"
+                                ? "bg-success"
+                                : b.status === "Cancelled"
+                                  ? "bg-danger"
+                                  : "bg-warning text-dark"
                             }`}
                           >
                             {b.status}
                           </span>
                         </td>
+
                         <td className="fw-semibold">${b.total_price}</td>
+
                         <td className="text-end pe-3">
                           <select
                             className="form-select form-select-sm d-inline-block w-auto"

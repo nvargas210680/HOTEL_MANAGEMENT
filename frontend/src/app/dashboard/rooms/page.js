@@ -363,17 +363,35 @@ export default function RoomsPage() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 className="h3 mb-0">Rooms Inventory</h1>
+          <h1 className="h3 mb-0" style={{ color: "#1e293b" }}>Rooms Inventory</h1>
           <p className="text-secondary small mb-0">
             Monitor inventory status and pricing details
           </p>
         </div>
         <div className="d-flex gap-2 align-items-center">
-          <span className="badge bg-primary fs-6">
+          <span
+            className="d-inline-flex align-items-center justify-content-center px-3 py-2 fw-semibold"
+            style={{
+              height: "40px",
+              minWidth: "130px",
+              borderRadius: "8px",
+              backgroundColor: "#f1f5f9",
+              color: "#334155",
+              fontSize: "0.9rem",
+              border: "1px solid #e2e8f0",
+            }}
+          >
             {rooms.length} Total Rooms
           </span>
+
           <button
-            className="btn btn-primary btn-sm fw-semibold ms-2"
+            className="btn btn-primary d-inline-flex align-items-center justify-content-center px-3 py-2 fw-semibold"
+            style={{
+              height: "40px",
+              minWidth: "130px",
+              borderRadius: "8px",
+              fontSize: "0.9rem",
+            }}
             onClick={() => setShowModal(true)}
           >
             + Add New Room
