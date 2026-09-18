@@ -37,13 +37,22 @@ class Rooms(models.Model):
     
 class Bookings(models.Model):
     booking_id = models.AutoField(primary_key=True)
-    # This connects to your Guests model
+
+    # Guest and room associated with the booking
     guest = models.ForeignKey(Guests, on_delete=models.CASCADE)
-    # This connects to your Rooms model
     room = models.ForeignKey(Rooms, on_delete=models.CASCADE)
+
+    # Planned reservation dates
     check_in_date = models.DateField()
     check_out_date = models.DateField()
+
+    # Actual stay dates, recorded by the admin during check-in/check-out
+    actual_check_in_date = models.DateField(null=True, blank=True)
+    actual_check_out_date = models.DateField(null=True, blank=True)
+
+    # Original booking price
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
+
     status = models.CharField(max_length=20, default='Confirmed')
 
     class Meta:

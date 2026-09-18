@@ -15,6 +15,7 @@ class AdminBookingSerializer(serializers.ModelSerializer):
     guest_phone = serializers.SerializerMethodField()
     id_document = serializers.SerializerMethodField()
     room_number = serializers.ReadOnlyField(source='room.room_number')
+    room_price_per_night = serializers.ReadOnlyField(source='room.price_per_night')
 
     class Meta:
         model = Bookings
@@ -25,8 +26,11 @@ class AdminBookingSerializer(serializers.ModelSerializer):
             'guest_phone',
             'id_document',
             'room_number',
+            'room_price_per_night',
             'check_in_date',
             'check_out_date',
+            'actual_check_in_date',
+            'actual_check_out_date',
             'status',
             'total_price'
         ]
@@ -156,9 +160,18 @@ class BookingSerializer(serializers.ModelSerializer):
     def validate(self, data):
         instance = getattr(self, 'instance', None)
 
-        check_in = data.get('check_in_date', instance.check_in_date if instance else None)
-        check_out = data.get('check_out_date', instance.check_out_date if instance else None)
-        room = data.get('room', instance.room if instance else None)
+        check_in = data.get(
+            'check_in_date',
+            instance.check_in_date if instance else None
+        )
+        check_out = data.get(
+            'check_out_date',
+            instance.check_out_date if instance else None
+        )
+        room = data.get(
+            'room',
+            instance.room if instance else None
+        )
 
         if check_in and check_out and check_out <= check_in:
             raise serializers.ValidationError({
@@ -173,11 +186,14 @@ class BookingSerializer(serializers.ModelSerializer):
             )
 
             if instance:
-                overlapping_bookings = overlapping_bookings.exclude(pk=instance.pk)
+                overlapping_bookings = overlapping_bookings.exclude(
+                    pk=instance.pk
+                )
 
             if overlapping_bookings.exists():
                 raise serializers.ValidationError({
-                    "non_field_errors": "This room is already booked for the selected dates."
+                    "non_field_errors":
+                        "This room is already booked for the selected dates."
                 })
 
         return data

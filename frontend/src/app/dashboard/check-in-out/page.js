@@ -14,12 +14,39 @@ export default function CheckInOutPage() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  // Inside your component or right before rendering the modal:
-  const baseAmount = Number(selectedInvoice?.total_price || 0);
-  const gstRate = 0.05; // 5% Alberta GST
-  const gstAmount = baseAmount * gstRate;
-  const grandTotal = baseAmount + gstAmount;
+  const [extraCharges, setExtraCharges] = useState([
+    { description: "", amount: "" },
+  ]);
 
+  const gstRate = 0.05;
+
+  const checkIn = selectedInvoice?.actual_check_in_date
+    ? new Date(selectedInvoice.actual_check_in_date)
+    : null;
+
+  const checkOut = selectedInvoice?.actual_check_out_date
+    ? new Date(selectedInvoice.actual_check_out_date)
+    : null;
+
+  const actualNights =
+    checkIn && checkOut
+      ? Math.max(1, Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+  const roomRate = Number(selectedInvoice?.room_price_per_night || 0);
+
+  const baseAmount = actualNights * roomRate;
+
+  const extraChargesTotal = extraCharges.reduce(
+    (total, charge) => total + Number(charge.amount || 0),
+    0,
+  );
+
+  const subtotal = baseAmount + extraChargesTotal;
+
+  const gstAmount = subtotal * gstRate;
+
+  const grandTotal = subtotal + gstAmount;
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -51,22 +78,33 @@ export default function CheckInOutPage() {
   // Handle Check-In
   const handleCheckIn = async (bookingId, roomId) => {
     setUpdatingId(bookingId);
+
     try {
-      // 1. Update booking status to Checked In
+      const actualCheckInDate = new Date().toISOString().split("T")[0];
+
       const bookingRes = await apiFetch(`/api/bookings/${bookingId}/`, {
         method: "PATCH",
-        body: JSON.stringify({ status: "Checked In" }),
+        body: JSON.stringify({
+          status: "Checked In",
+          actual_check_in_date: actualCheckInDate,
+        }),
       });
-      if (!bookingRes.ok) throw new Error("Failed to check in booking.");
 
-      // 2. Automatically update room status to Occupied
+      if (!bookingRes.ok) {
+        throw new Error("Failed to check in booking.");
+      }
+
       if (roomId) {
         const roomRes = await apiFetch(`/api/rooms/${roomId}/`, {
           method: "PATCH",
-          body: JSON.stringify({ status: "Occupied" }),
+          body: JSON.stringify({
+            status: "Occupied",
+          }),
         });
-        if (!roomRes.ok)
+
+        if (!roomRes.ok) {
           throw new Error("Failed to update room status to Occupied.");
+        }
       }
 
       await fetchData();
@@ -80,22 +118,33 @@ export default function CheckInOutPage() {
   // Handle Check-Out
   const handleCheckOut = async (bookingId, roomId) => {
     setUpdatingId(bookingId);
+
     try {
-      // 1. Update booking status to Checked Out
+      const actualCheckOutDate = new Date().toISOString().split("T")[0];
+
       const bookingRes = await apiFetch(`/api/bookings/${bookingId}/`, {
         method: "PATCH",
-        body: JSON.stringify({ status: "Checked Out" }),
+        body: JSON.stringify({
+          status: "Checked Out",
+          actual_check_out_date: actualCheckOutDate,
+        }),
       });
-      if (!bookingRes.ok) throw new Error("Failed to check out booking.");
 
-      // 2. Automatically update room status to Cleaning
+      if (!bookingRes.ok) {
+        throw new Error("Failed to check out booking.");
+      }
+
       if (roomId) {
         const roomRes = await apiFetch(`/api/rooms/${roomId}/`, {
           method: "PATCH",
-          body: JSON.stringify({ status: "Cleaning" }),
+          body: JSON.stringify({
+            status: "Cleaning",
+          }),
         });
-        if (!roomRes.ok)
+
+        if (!roomRes.ok) {
           throw new Error("Failed to update room status to Cleaning.");
+        }
       }
 
       await fetchData();
@@ -430,7 +479,6 @@ export default function CheckInOutPage() {
                 </div>
 
                 {/* Line Items Table */}
-                {/* Line Items Table */}
                 <table className="table table-bordered align-middle">
                   <thead className="table-light">
                     <tr>
@@ -439,15 +487,77 @@ export default function CheckInOutPage() {
                       <th className="text-end">Amount</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     <tr>
                       <td>
                         Room Accommodation (Room {selectedInvoice.room_number})
                       </td>
-                      <td className="text-center">Standard Stay</td>
-                      <td className="text-end">${baseAmount.toFixed(2)}</td>
+                      <td className="text-center">
+                        {actualNights} night{actualNights !== 1 ? "s" : ""} × $
+                        {roomRate.toFixed(2)}
+                      </td>
+                      <td className="text-end">${subtotal.toFixed(2)}</td>
+                    </tr>
+
+                    {extraCharges.map((charge, index) => (
+                      <tr key={index}>
+                        <td>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder="Extra charge (e.g. Drinks)"
+                            value={charge.description}
+                            onChange={(e) => {
+                              const updatedCharges = [...extraCharges];
+                              updatedCharges[index].description =
+                                e.target.value;
+                              setExtraCharges(updatedCharges);
+                            }}
+                          />
+                        </td>
+
+                        <td className="text-center">
+                          <input
+                            type="number"
+                            className="form-control form-control-sm text-center"
+                            placeholder="Amount"
+                            min="0"
+                            step="0.01"
+                            value={charge.amount}
+                            onChange={(e) => {
+                              const updatedCharges = [...extraCharges];
+                              updatedCharges[index].amount = e.target.value;
+                              setExtraCharges(updatedCharges);
+                            }}
+                          />
+                        </td>
+
+                        <td className="text-end">
+                          ${Number(charge.amount || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+
+                    <tr>
+                      <td colSpan="3" className="text-end">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() =>
+                            setExtraCharges([
+                              ...extraCharges,
+                              { description: "", amount: "" },
+                            ])
+                          }
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Add Charge
+                        </button>
+                      </td>
                     </tr>
                   </tbody>
+
                   <tbody className="border-top-0">
                     <tr>
                       <td colSpan="2" className="text-end text-muted">
@@ -455,6 +565,7 @@ export default function CheckInOutPage() {
                       </td>
                       <td className="text-end">${baseAmount.toFixed(2)}</td>
                     </tr>
+
                     <tr>
                       <td colSpan="2" className="text-end text-muted">
                         GST (5% - Alberta):
@@ -462,6 +573,7 @@ export default function CheckInOutPage() {
                       <td className="text-end">${gstAmount.toFixed(2)}</td>
                     </tr>
                   </tbody>
+
                   <tfoot className="table-light">
                     <tr>
                       <td colSpan="2" className="text-end fw-bold">
