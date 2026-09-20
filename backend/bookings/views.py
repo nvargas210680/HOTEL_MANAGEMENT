@@ -47,8 +47,64 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_booking_list(request):
-    bookings = Bookings.objects.all().order_by('-booking_id')
-    serializer = AdminBookingSerializer(bookings, many=True)
+    from datetime import datetime
+
+    bookings = Bookings.objects.all()
+
+    from_date = request.query_params.get('from_date')
+    to_date = request.query_params.get('to_date')
+
+    if from_date:
+        try:
+            from_date = datetime.strptime(
+                from_date,
+                '%Y-%m-%d'
+            ).date()
+
+            bookings = bookings.filter(
+                check_in_date__gte=from_date
+            )
+
+        except ValueError:
+            return Response(
+                {
+                    'error': (
+                        'Invalid from_date format. '
+                        'Use YYYY-MM-DD.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    if to_date:
+        try:
+            to_date = datetime.strptime(
+                to_date,
+                '%Y-%m-%d'
+            ).date()
+
+            bookings = bookings.filter(
+                check_in_date__lte=to_date
+            )
+
+        except ValueError:
+            return Response(
+                {
+                    'error': (
+                        'Invalid to_date format. '
+                        'Use YYYY-MM-DD.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    bookings = bookings.order_by('-booking_id')
+
+    serializer = AdminBookingSerializer(
+        bookings,
+        many=True
+    )
+
     return Response(serializer.data)
 
 @api_view(['GET', 'PATCH', 'PUT', 'DELETE'])

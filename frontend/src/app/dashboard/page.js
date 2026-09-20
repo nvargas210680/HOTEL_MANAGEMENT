@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { apiFetch } from "@/utils/api";
 
 export default function OverviewPage() {
@@ -13,13 +13,38 @@ export default function OverviewPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  // Check-In Date filter state
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [appliedFromDate, setAppliedFromDate] = useState("");
+  const [appliedToDate, setAppliedToDate] = useState("");
+
+  const fromDateRef = useRef(null);
+  const toDateRef = useRef(null);
+
   useEffect(() => {
     fetchBookings();
   }, []);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (from = "", to = "") => {
     try {
-      const response = await apiFetch("/api/admin/bookings/");
+      setLoading(true);
+
+      const params = new URLSearchParams();
+
+      if (from) {
+        params.append("from_date", from);
+      }
+
+      if (to) {
+        params.append("to_date", to);
+      }
+
+      const query = params.toString();
+
+      const response = await apiFetch(
+        `/api/admin/bookings/${query ? `?${query}` : ""}`
+      );
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -27,6 +52,7 @@ export default function OverviewPage() {
 
       const data = await response.json();
       setBookings(data);
+      setError(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -34,8 +60,33 @@ export default function OverviewPage() {
     }
   };
 
+  const openDatePicker = (ref) => {
+    if (ref.current) {
+      if (typeof ref.current.showPicker === "function") {
+        ref.current.showPicker();
+      } else {
+        ref.current.focus();
+      }
+    }
+  };
+
+  const handleDateFilter = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+    fetchBookings(fromDate, toDate);
+  };
+
+  const handleClearDateFilter = () => {
+    setFromDate("");
+    setToDate("");
+    setAppliedFromDate("");
+    setAppliedToDate("");
+    fetchBookings("", "");
+  };
+
   const handleStatusChange = async (bookingId, newStatus) => {
     setUpdatingId(bookingId);
+
     try {
       const response = await apiFetch(`/api/admin/bookings/${bookingId}/`, {
         method: "PATCH",
@@ -58,7 +109,8 @@ export default function OverviewPage() {
     }
   };
 
-  // Compute filtered list on the fly based on search term & status filter
+  // Search & status filters are applied to the bookings
+  // already returned by the backend date filter.
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const matchesSearch =
@@ -66,7 +118,8 @@ export default function OverviewPage() {
         b.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         String(b.booking_id).includes(searchTerm);
 
-      const matchesStatus = statusFilter === "All" || b.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "All" || b.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -83,6 +136,7 @@ export default function OverviewPage() {
             Manage guest reservations and active status
           </p>
         </div>
+
         <span
           className="d-inline-flex align-items-center justify-content-center px-3 py-2 fw-semibold"
           style={{
@@ -101,7 +155,7 @@ export default function OverviewPage() {
 
       {/* SEARCH AND FILTER BAR */}
       <div className="row g-3 mb-4">
-        <div className="col-md-8">
+        <div className="col-md-5">
           <input
             type="text"
             className="form-control"
@@ -110,7 +164,8 @@ export default function OverviewPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="col-md-4">
+
+        <div className="col-md-3">
           <select
             className="form-select"
             value={statusFilter}
@@ -122,6 +177,66 @@ export default function OverviewPage() {
             <option value="Cancelled">Cancelled</option>
           </select>
         </div>
+
+        <div className="col-md-4">
+          <div className="d-flex gap-2">
+            <div className="input-group">
+              <input
+                ref={fromDateRef}
+                type="date"
+                className="form-control"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                aria-label="From check-in date"
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => openDatePicker(fromDateRef)}
+                title="Select from date"
+              >
+                <i className="bi bi-calendar3"></i>
+              </button>
+            </div>
+
+            <div className="input-group">
+              <input
+                ref={toDateRef}
+                type="date"
+                className="form-control"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                aria-label="To check-in date"
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => openDatePicker(toDateRef)}
+                title="Select to date"
+              >
+                <i className="bi bi-calendar3"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="d-flex justify-content-end gap-2 mb-4">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleDateFilter}
+        >
+          Apply Date Filter
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-outline-secondary"
+          onClick={handleClearDateFilter}
+        >
+          Clear
+        </button>
       </div>
 
       {loading && (
@@ -138,6 +253,7 @@ export default function OverviewPage() {
         <div className="card shadow-sm">
           <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 className="mb-0 fw-bold">Recent Bookings</h5>
+
             <small className="text-muted">
               Showing {filteredBookings.length} of {bookings.length}
             </small>
@@ -211,7 +327,10 @@ export default function OverviewPage() {
                             value={b.status}
                             disabled={updatingId === b.booking_id}
                             onChange={(e) =>
-                              handleStatusChange(b.booking_id, e.target.value)
+                              handleStatusChange(
+                                b.booking_id,
+                                e.target.value,
+                              )
                             }
                           >
                             <option value="Pending">Pending</option>
