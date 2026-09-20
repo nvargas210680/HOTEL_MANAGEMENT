@@ -122,6 +122,65 @@ export default function CheckInOutPage() {
     try {
       const actualCheckOutDate = new Date().toISOString().split("T")[0];
 
+      const booking = bookings.find((item) => item.booking_id === bookingId);
+
+      if (!booking) {
+        throw new Error("Booking information not found.");
+      }
+
+      const actualCheckInDate = booking.actual_check_in_date;
+
+      if (!actualCheckInDate) {
+        throw new Error("Actual check-in date is missing.");
+      }
+
+      const checkInDate = new Date(actualCheckInDate);
+      const checkOutDate = new Date(actualCheckOutDate);
+
+      const nights = Math.max(
+        1,
+        Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)),
+      );
+
+      const roomRate = Number(booking.room_price_per_night || 0);
+
+      const roomAmount = nights * roomRate;
+
+      const validExtraCharges = extraCharges.filter(
+        (charge) => charge.description.trim() && Number(charge.amount) > 0,
+      );
+
+      const extraChargesTotal = validExtraCharges.reduce(
+        (total, charge) => total + Number(charge.amount),
+        0,
+      );
+
+      const invoiceSubtotal = roomAmount + extraChargesTotal;
+      const invoiceGst = invoiceSubtotal * gstRate;
+      const invoiceTotal = invoiceSubtotal + invoiceGst;
+
+      const invoiceRes = await apiFetch("/api/invoices/", {
+        method: "POST",
+        body: JSON.stringify({
+          booking_id: bookingId,
+          invoice_date: actualCheckOutDate,
+          room_nights: nights,
+          room_rate: roomRate,
+          subtotal: invoiceSubtotal.toFixed(2),
+          gst_amount: invoiceGst.toFixed(2),
+          total_amount: invoiceTotal.toFixed(2),
+          extra_charges: validExtraCharges.map((charge) => ({
+            description: charge.description.trim(),
+            amount: Number(charge.amount).toFixed(2),
+          })),
+        }),
+      });
+
+      if (!invoiceRes.ok) {
+        const invoiceError = await invoiceRes.json().catch(() => ({}));
+        throw new Error(invoiceError.error || "Failed to save invoice.");
+      }
+
       const bookingRes = await apiFetch(`/api/bookings/${bookingId}/`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -131,7 +190,7 @@ export default function CheckInOutPage() {
       });
 
       if (!bookingRes.ok) {
-        throw new Error("Failed to check out booking.");
+        throw new Error("Invoice was saved, but checkout failed.");
       }
 
       if (roomId) {
@@ -143,15 +202,72 @@ export default function CheckInOutPage() {
         });
 
         if (!roomRes.ok) {
-          throw new Error("Failed to update room status to Cleaning.");
+          throw new Error(
+            "Checkout was completed, but room status could not be updated.",
+          );
         }
       }
 
       await fetchData();
+
+      setExtraCharges([{ description: "", amount: "" }]);
+
+      alert(`Checkout completed. Invoice total: $${invoiceTotal.toFixed(2)}`);
     } catch (err) {
       alert(`Check-out error: ${err.message}`);
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleSaveInvoice = async () => {
+    if (!selectedInvoice) return;
+
+    try {
+      const validExtraCharges = extraCharges.filter(
+        (charge) => charge.description.trim() && Number(charge.amount) > 0,
+      );
+
+      const invoiceRes = await apiFetch(
+        `/api/invoices/${selectedInvoice.booking_id}/update/`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            extra_charges: validExtraCharges.map((charge) => ({
+              description: charge.description.trim(),
+              amount: Number(charge.amount).toFixed(2),
+            })),
+          }),
+        },
+      );
+
+      if (!invoiceRes.ok) {
+        const errorData = await invoiceRes.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to save invoice.");
+      }
+
+      const updatedInvoice = await invoiceRes.json();
+
+      setSelectedInvoice((current) => ({
+        ...current,
+        subtotal: updatedInvoice.subtotal,
+        gst_amount: updatedInvoice.gst_amount,
+        total_amount: updatedInvoice.total_amount,
+      }));
+
+      setExtraCharges(
+        updatedInvoice.items?.length
+          ? updatedInvoice.items.map((item) => ({
+              invoice_item_id: item.invoice_item_id,
+              description: item.description,
+              amount: item.amount,
+            }))
+          : [{ description: "", amount: "" }],
+      );
+
+      alert("Invoice saved successfully.");
+    } catch (err) {
+      alert(`Save invoice error: ${err.message}`);
     }
   };
 
@@ -186,6 +302,37 @@ export default function CheckInOutPage() {
       return matchesSearch && matchesFilter;
     });
   }, [bookings, searchTerm, statusFilter]);
+
+  const handleOpenInvoice = async (booking) => {
+    try {
+      const invoiceRes = await apiFetch(`/api/invoices/${booking.booking_id}/`);
+
+      if (!invoiceRes.ok) {
+        const errorData = await invoiceRes.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to load invoice.");
+      }
+
+      const invoiceData = await invoiceRes.json();
+
+      setSelectedInvoice({
+        ...booking,
+        ...invoiceData,
+        room_price_per_night: invoiceData.room_rate,
+      });
+
+      setExtraCharges(
+        invoiceData.items?.length
+          ? invoiceData.items.map((item) => ({
+              invoice_item_id: item.invoice_item_id,
+              description: item.description,
+              amount: item.amount,
+            }))
+          : [{ description: "", amount: "" }],
+      );
+    } catch (err) {
+      alert(`Invoice error: ${err.message}`);
+    }
+  };
 
   return (
     <div>
@@ -385,7 +532,7 @@ export default function CheckInOutPage() {
                               {b.status === "Checked Out" && (
                                 <button
                                   className="btn btn-sm btn-outline-primary px-3"
-                                  onClick={() => setSelectedInvoice(b)}
+                                  onClick={() => handleOpenInvoice(b)}
                                 >
                                   <i className="bi bi-receipt me-1"></i> Invoice
                                 </button>
@@ -602,6 +749,13 @@ export default function CheckInOutPage() {
                   onClick={() => window.print()}
                 >
                   <i className="bi bi-printer me-1"></i> Print Invoice
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={handleSaveInvoice}
+                >
+                  <i className="bi bi-check-circle me-1"></i> Save Invoice
                 </button>
                 <button
                   type="button"

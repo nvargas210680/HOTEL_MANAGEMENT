@@ -62,6 +62,12 @@ export default function DashboardLayout({ children }) {
             >
               Check-In / Out
             </Link>
+            <Link
+              href="/dashboard/reports"
+              className="nav-link text-white my-1 hover-opacity"
+            >
+              Reports
+            </Link>
           </nav>
 
           {/* Logout Button */}

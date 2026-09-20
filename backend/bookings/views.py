@@ -1,5 +1,4 @@
-# Django imports
-# Django core imports
+
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -27,7 +26,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Local app imports
-from .models import Bookings, Guests, Hotel, Rooms
+from .models import (
+    Bookings,
+    Guests,
+    Hotel,
+    Rooms,
+    Invoice,
+    InvoiceItem,
+)
 from .serializers import (
     AdminBookingSerializer,
     BookingSerializer,
@@ -67,7 +73,421 @@ def admin_booking_detail(request, pk):
     elif request.method == 'DELETE':
         booking.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_invoice(request):
+    booking_id = request.data.get('booking_id')
+    invoice_date = request.data.get('invoice_date')
+    room_nights = request.data.get('room_nights')
+    room_rate = request.data.get('room_rate')
+    subtotal = request.data.get('subtotal')
+    gst_amount = request.data.get('gst_amount')
+    total_amount = request.data.get('total_amount')
+    extra_charges = request.data.get('extra_charges', [])
 
+    if not booking_id:
+        return Response(
+            {'error': 'Booking ID is required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        booking = Bookings.objects.get(pk=booking_id)
+    except Bookings.DoesNotExist:
+        return Response(
+            {'error': 'Booking not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if hasattr(booking, 'invoice'):
+        return Response(
+            {
+                'error': 'An invoice already exists for this booking.',
+                'invoice_id': booking.invoice.invoice_id
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not invoice_date:
+        return Response(
+            {'error': 'Invoice date is required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        invoice = Invoice.objects.create(
+            booking=booking,
+            invoice_date=invoice_date,
+            room_nights=room_nights,
+            room_rate=room_rate,
+            subtotal=subtotal,
+            gst_amount=gst_amount,
+            total_amount=total_amount,
+            status='Completed'
+        )
+
+        for charge in extra_charges:
+            description = charge.get('description', '').strip()
+            amount = charge.get('amount', 0)
+
+            if description and float(amount) > 0:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    description=description,
+                    amount=amount
+                )
+
+        return Response(
+            {
+                'message': 'Invoice created successfully.',
+                'invoice_id': invoice.invoice_id,
+                'booking_id': booking.booking_id,
+                'total_amount': invoice.total_amount
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+    except Exception as error:
+        return Response(
+            {'error': str(error)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def booking_revenue_report(request):
+    from decimal import Decimal
+    from datetime import datetime
+
+    from_date = request.query_params.get('from_date')
+    to_date = request.query_params.get('to_date')
+
+    invoices = (
+        Invoice.objects
+        .filter(status='Completed')
+        .select_related(
+            'booking',
+            'booking__guest',
+            'booking__room'
+        )
+    )
+
+    if from_date:
+        try:
+            from_date = datetime.strptime(
+                from_date,
+                '%Y-%m-%d'
+            ).date()
+
+            invoices = invoices.filter(
+                invoice_date__gte=from_date
+            )
+
+        except ValueError:
+            return Response(
+                {
+                    'error': (
+                        'Invalid from_date format. '
+                        'Use YYYY-MM-DD.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    if to_date:
+        try:
+            to_date = datetime.strptime(
+                to_date,
+                '%Y-%m-%d'
+            ).date()
+
+            invoices = invoices.filter(
+                invoice_date__lte=to_date
+            )
+
+        except ValueError:
+            return Response(
+                {
+                    'error': (
+                        'Invalid to_date format. '
+                        'Use YYYY-MM-DD.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    invoices = invoices.order_by(
+        '-invoice_date',
+        '-invoice_id'
+    )
+
+    report = []
+    total_raw_booking_cost = Decimal('0.00')
+    total_revenue = Decimal('0.00')
+
+    for invoice in invoices:
+        raw_booking_cost = (
+            invoice.room_nights * invoice.room_rate
+        )
+
+        revenue_30_percent = (
+            raw_booking_cost * Decimal('0.30')
+        )
+
+        report.append({
+            'invoice_id': invoice.invoice_id,
+            'booking_id': invoice.booking.booking_id,
+            'guest_name': (
+                f"{invoice.booking.guest.first_name} "
+                f"{invoice.booking.guest.last_name}"
+            ),
+            'room_number': invoice.booking.room.room_number,
+            'check_in_date': invoice.booking.actual_check_in_date,
+            'check_out_date': invoice.booking.actual_check_out_date,
+            'room_nights': invoice.room_nights,
+            'room_rate': float(invoice.room_rate),
+            'raw_booking_cost': float(raw_booking_cost),
+            'revenue_30_percent': float(revenue_30_percent),
+            'invoice_date': invoice.invoice_date,
+        })
+
+        total_raw_booking_cost += raw_booking_cost
+        total_revenue += revenue_30_percent
+
+    return Response({
+        'summary': {
+            'total_bookings': len(report),
+            'total_raw_booking_cost': float(
+                total_raw_booking_cost
+            ),
+            'total_revenue_30_percent': float(
+                total_revenue
+            ),
+        },
+        'bookings': report,
+    })
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_invoice(request, booking_id):
+    try:
+        invoice = (
+            Invoice.objects
+            .select_related(
+                'booking',
+                'booking__guest',
+                'booking__room'
+            )
+            .prefetch_related('items')
+            .get(booking_id=booking_id)
+        )
+    except Invoice.DoesNotExist:
+        return Response(
+            {'error': 'Invoice not found for this booking.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    return Response({
+        'invoice_id': invoice.invoice_id,
+        'booking_id': invoice.booking.booking_id,
+        'invoice_date': invoice.invoice_date,
+        'guest_name': (
+            f"{invoice.booking.guest.first_name} "
+            f"{invoice.booking.guest.last_name}"
+        ),
+        'guest_email': invoice.booking.guest.email,
+        'guest_phone': invoice.booking.guest.phone_number,
+        'room_number': invoice.booking.room.room_number,
+        'actual_check_in_date': invoice.booking.actual_check_in_date,
+        'actual_check_out_date': invoice.booking.actual_check_out_date,
+        'room_nights': invoice.room_nights,
+        'room_rate': float(invoice.room_rate),
+        'subtotal': float(invoice.subtotal),
+        'gst_amount': float(invoice.gst_amount),
+        'total_amount': float(invoice.total_amount),
+        'status': invoice.status,
+        'items': [
+            {
+                'invoice_item_id': item.invoice_item_id,
+                'description': item.description,
+                'amount': float(item.amount),
+            }
+            for item in invoice.items.all()
+        ],
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def addon_sales_report(request):
+    from decimal import Decimal
+    from datetime import datetime
+
+    from_date = request.query_params.get('from_date')
+    to_date = request.query_params.get('to_date')
+
+    items = (
+        InvoiceItem.objects
+        .filter(invoice__status='Completed')
+        .select_related(
+            'invoice',
+            'invoice__booking',
+            'invoice__booking__guest'
+        )
+    )
+
+    if from_date:
+        try:
+            from_date = datetime.strptime(
+                from_date,
+                '%Y-%m-%d'
+            ).date()
+            items = items.filter(
+                invoice__invoice_date__gte=from_date
+            )
+        except ValueError:
+            return Response(
+                {'error': 'Invalid from_date format. Use YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    if to_date:
+        try:
+            to_date = datetime.strptime(
+                to_date,
+                '%Y-%m-%d'
+            ).date()
+            items = items.filter(
+                invoice__invoice_date__lte=to_date
+            )
+        except ValueError:
+            return Response(
+                {'error': 'Invalid to_date format. Use YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    items = items.order_by(
+        '-invoice__invoice_date',
+        '-invoice_item_id'
+    )
+
+    report = []
+    total_addon_sales = Decimal('0.00')
+
+    for item in items:
+        amount = item.amount
+
+        report.append({
+            'invoice_id': item.invoice.invoice_id,
+            'booking_id': item.invoice.booking.booking_id,
+            'invoice_date': item.invoice.invoice_date,
+            'guest_name': (
+                f"{item.invoice.booking.guest.first_name} "
+                f"{item.invoice.booking.guest.last_name}"
+            ),
+            'description': item.description,
+            'amount': float(amount),
+        })
+
+        total_addon_sales += amount
+
+    return Response({
+        'summary': {
+            'total_addon_items': len(report),
+            'total_addon_sales': float(total_addon_sales),
+        },
+        'add_ons': report,
+    })
+    
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_invoice(request, booking_id):
+    from decimal import Decimal
+
+    try:
+        invoice = Invoice.objects.get(booking_id=booking_id)
+    except Invoice.DoesNotExist:
+        return Response(
+            {'error': 'Invoice not found for this booking.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    extra_charges = request.data.get('extra_charges', [])
+
+    try:
+        # Remove the existing add-ons first.
+        invoice.items.all().delete()
+
+        # Add the current add-ons.
+        for charge in extra_charges:
+            description = str(
+                charge.get('description', '')
+            ).strip()
+
+            try:
+                amount = Decimal(str(charge.get('amount', 0)))
+            except (ValueError, TypeError):
+                continue
+
+            if description and amount > 0:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    description=description,
+                    amount=amount
+                )
+
+        # Recalculate invoice totals.
+        extra_charges_total = sum(
+            (
+                item.amount
+                for item in invoice.items.all()
+            ),
+            Decimal('0.00')
+        )
+
+        room_amount = (
+            Decimal(invoice.room_nights)
+            * invoice.room_rate
+        )
+
+        subtotal = room_amount + extra_charges_total
+        gst_amount = subtotal * Decimal('0.05')
+        total_amount = subtotal + gst_amount
+
+        invoice.subtotal = subtotal
+        invoice.gst_amount = gst_amount
+        invoice.total_amount = total_amount
+        invoice.save(
+            update_fields=[
+                'subtotal',
+                'gst_amount',
+                'total_amount'
+            ]
+        )
+
+        return Response({
+            'message': 'Invoice updated successfully.',
+            'invoice_id': invoice.invoice_id,
+            'booking_id': invoice.booking.booking_id,
+            'subtotal': float(invoice.subtotal),
+            'gst_amount': float(invoice.gst_amount),
+            'total_amount': float(invoice.total_amount),
+            'items': [
+                {
+                    'invoice_item_id': item.invoice_item_id,
+                    'description': item.description,
+                    'amount': float(item.amount),
+                }
+                for item in invoice.items.all()
+            ],
+        })
+
+    except Exception as error:
+        return Response(
+            {'error': str(error)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):

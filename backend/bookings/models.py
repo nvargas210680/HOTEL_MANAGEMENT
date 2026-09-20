@@ -144,6 +144,53 @@ class Payment(models.Model):
     # This forces the email field to have a unique constraint at the database level
     User._meta.get_field('email')._unique = True
     
+class Invoice(models.Model):
+    invoice_id = models.AutoField(primary_key=True)
+
+    booking = models.OneToOneField(
+        'Bookings',
+        on_delete=models.CASCADE,
+        related_name='invoice'
+    )
+
+    invoice_date = models.DateField()
+    room_nights = models.PositiveIntegerField()
+    room_rate = models.DecimalField(max_digits=10, decimal_places=2)
+
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    status = models.CharField(
+        max_length=20,
+        default='Completed'
+    )
+
+    class Meta:
+        db_table = 'invoices'
+
+    def __str__(self):
+        return f"Invoice {self.invoice_id} - Booking {self.booking.booking_id}"
+
+
+class InvoiceItem(models.Model):
+    invoice_item_id = models.AutoField(primary_key=True)
+
+    invoice = models.ForeignKey(
+        'Invoice',
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+
+    description = models.CharField(max_length=150)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = 'invoice_items'
+
+    def __str__(self):
+        return f"{self.description} - ${self.amount}"
+    
     
 
 
