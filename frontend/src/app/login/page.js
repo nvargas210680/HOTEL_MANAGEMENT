@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -17,6 +16,7 @@ export default function LoginPage() {
 
     if (token && storedUser) {
       const user = JSON.parse(storedUser);
+
       if (user.is_staff) {
         router.push("/dashboard");
       } else {
@@ -73,58 +73,243 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-vh-100 d-flex align-items-center justify-content-center"
+      className="min-vh-100 d-flex align-items-center justify-content-center px-3"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/images/hotel_palms.jpg')`,
+        position: "relative",
+        overflow: "hidden",
+        backgroundImage: `url('/images/hotel_palms.jpg')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
     >
       <div
-        className="card p-4 shadow-lg text-dark"
-        style={{ width: "100%", maxWidth: "400px" }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.32)",
+        }}
+      />
+
+      <div
+        className="w-100 p-4 p-md-5"
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: "420px",
+          background: "rgba(255, 255, 255, 0.12)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          border: "1px solid rgba(255, 255, 255, 0.32)",
+          borderRadius: "20px",
+          boxShadow:
+            "0 8px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18)",
+          color: "#ffffff",
+        }}
       >
-        <h2 className="text-center mb-4 fw-bold">Sign In</h2>
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: "8%",
+            right: "8%",
+            height: "1px",
+            background: "rgba(255, 255, 255, 0.45)",
+          }}
+        />
+
+        <div className="text-center mb-4">
+          <div
+            className="d-flex align-items-center justify-content-center mx-auto mb-3"
+            style={{
+              width: "58px",
+              height: "58px",
+              borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.14)",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              boxShadow: "inset 0 1px 8px rgba(255, 255, 255, 0.12)",
+            }}
+          >
+            <i
+              className="bi bi-buildings"
+              style={{
+                fontSize: "1.5rem",
+                color: "#ffffff",
+              }}
+            />
+          </div>
+
+          <h2
+            className="fw-bold mb-2"
+            style={{
+              color: "#ffffff",
+              letterSpacing: "-0.3px",
+            }}
+          >
+            Welcome Back
+          </h2>
+
+          <p
+            className="mb-0"
+            style={{
+              color: "rgba(255, 255, 255, 0.78)",
+              fontSize: "0.9rem",
+            }}
+          >
+            Sign in to continue to Hotel Palms
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label fw-semibold">Username</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+            <label
+              className="form-label fw-semibold"
+              style={{
+                color: "#ffffff",
+                fontSize: "0.9rem",
+              }}
+            >
+              Username
+            </label>
+
+            <div className="position-relative">
+              <i
+                className="bi bi-person position-absolute"
+                style={{
+                  left: "15px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  zIndex: 2,
+                }}
+              />
+
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={{
+                  height: "48px",
+                  paddingLeft: "42px",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  background: "rgba(255, 255, 255, 0.16)",
+                  color: "#ffffff",
+                  boxShadow: "inset 0 1px 6px rgba(0, 0, 0, 0.08)",
+                }}
+              />
+            </div>
           </div>
+
           <div className="mb-3">
-            <label className="form-label fw-semibold">Password</label>
-            <input
-              type="password"
-              className="form-control"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label
+              className="form-label fw-semibold"
+              style={{
+                color: "#ffffff",
+                fontSize: "0.9rem",
+              }}
+            >
+              Password
+            </label>
+
+            <div className="position-relative">
+              <i
+                className="bi bi-lock position-absolute"
+                style={{
+                  left: "15px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  zIndex: 2,
+                }}
+              />
+
+              <input
+                type="password"
+                className="form-control"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  height: "48px",
+                  paddingLeft: "42px",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  background: "rgba(255, 255, 255, 0.16)",
+                  color: "#ffffff",
+                  boxShadow: "inset 0 1px 6px rgba(0, 0, 0, 0.08)",
+                }}
+              />
+            </div>
+
             {errorMessage && (
-              <div className="alert alert-danger mt-2" role="alert">
+              <div
+                className="mt-3 px-3 py-2"
+                role="alert"
+                style={{
+                  background: "rgba(220, 53, 69, 0.2)",
+                  border: "1px solid rgba(255, 150, 150, 0.3)",
+                  borderRadius: "9px",
+                  color: "#ffffff",
+                  fontSize: "0.85rem",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
+              >
+                <i className="bi bi-exclamation-circle me-2" />
                 {errorMessage}
               </div>
             )}
+
             <div className="text-end mt-2">
               <Link
                 href="/auth/forgot-password"
-                className="text-decoration-none small text-muted"
+                className="text-decoration-none"
+                style={{
+                  color: "rgba(255, 255, 255, 0.78)",
+                  fontSize: "0.82rem",
+                }}
               >
                 Forgot your password?
               </Link>
             </div>
           </div>
-          <button className="btn btn-primary w-100 mt-2">Login</button>
-          <div className="text-center mt-3">
-            <span className="text-muted small">Don't have an account? </span>
-            <Link href="/register" className="text-decoration-none fw-semibold">
+
+          <button
+            type="submit"
+            className="btn w-100 fw-semibold mt-2"
+            style={{
+              height: "48px",
+              borderRadius: "10px",
+              background: "rgba(255, 255, 255, 0.9)",
+              color: "#1e293b",
+              border: "1px solid rgba(255, 255, 255, 0.7)",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            Sign In
+          </button>
+
+          <div className="text-center mt-4">
+            <span
+              className="small"
+              style={{
+                color: "rgba(255, 255, 255, 0.72)",
+              }}
+            >
+              Don't have an account?{" "}
+            </span>
+
+            <Link
+              href="/register"
+              className="text-decoration-none fw-semibold"
+              style={{
+                color: "#ffffff",
+                fontSize: "0.88rem",
+              }}
+            >
               Create Account
             </Link>
           </div>

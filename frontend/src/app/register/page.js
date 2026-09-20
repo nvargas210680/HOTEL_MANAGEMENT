@@ -64,26 +64,78 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="d-flex align-items-center justify-content-center py-4"
+      className="d-flex align-items-center justify-content-center py-5"
       style={{
         minHeight: "100vh",
         paddingTop: "90px",
-        paddingBottom: "30px",
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/images/hotel_palms.jpg')`,
+        paddingBottom: "40px",
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)), url('/images/hotel_palms.jpg')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       }}
     >
       <div
-        className="card p-4 shadow-lg border-0 text-dark"
+        className="p-4 p-md-5"
         style={{
           width: "100%",
-          maxWidth: "450px",
-          borderRadius: "16px",
+          maxWidth: "500px",
+          borderRadius: "24px",
+          background: "rgba(255, 255, 255, 0.14)",
+          backdropFilter: "blur(22px) saturate(140%)",
+          WebkitBackdropFilter: "blur(22px) saturate(140%)",
+          border: "1px solid rgba(255, 255, 255, 0.32)",
+          boxShadow:
+            "0 25px 60px rgba(0, 0, 0, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.28)",
         }}
       >
-        <h2 className="text-center mb-4 fw-bold">Create Guest Account</h2>
+        <div className="text-center mb-4">
+          <div
+            className="d-inline-flex align-items-center justify-content-center mb-3 overflow-hidden"
+            style={{
+              width: "120px",
+              height: "120px",
+              borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.16)",
+              border: "1px solid rgba(255, 255, 255, 0.38)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow:
+                "0 12px 35px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.3)",
+            }}
+          >
+            <img
+              src="/images/hotel_palms_logo.jpg"
+              alt="Hotel Palms Logo"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+
+          <h2
+            className="mb-1 fw-bold"
+            style={{
+              color: "#ffffff",
+              textShadow: "0 2px 10px rgba(0, 0, 0, 0.25)",
+            }}
+          >
+            Create Guest Account
+          </h2>
+
+          <p
+            className="mb-0"
+            style={{
+              color: "rgba(255, 255, 255, 0.82)",
+              fontSize: "0.9rem",
+            }}
+          >
+            Create an account to manage your hotel reservations
+          </p>
+        </div>
 
         {errorMsg && (
           <div className="alert alert-danger py-2 small" role="alert">
@@ -94,7 +146,12 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit}>
           <div className="row">
             <div className="col-md-6 mb-3">
-              <label className="form-label fw-semibold">First Name</label>
+              <label
+                className="form-label fw-semibold"
+                style={{ color: "#ffffff" }}
+              >
+                First Name
+              </label>
               <input
                 type="text"
                 name="first_name"
@@ -103,11 +160,25 @@ export default function RegisterPage() {
                 value={formData.first_name}
                 onChange={handleChange}
                 required
+                style={{
+                  background: "rgba(255, 255, 255, 0.16)",
+                  border: "1px solid rgba(255, 255, 255, 0.28)",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  padding: "10px 13px",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
               />
             </div>
 
             <div className="col-md-6 mb-3">
-              <label className="form-label fw-semibold">Last Name</label>
+              <label
+                className="form-label fw-semibold"
+                style={{ color: "#ffffff" }}
+              >
+                Last Name
+              </label>
               <input
                 type="text"
                 name="last_name"
@@ -116,12 +187,26 @@ export default function RegisterPage() {
                 value={formData.last_name}
                 onChange={handleChange}
                 required
+                style={{
+                  background: "rgba(255, 255, 255, 0.16)",
+                  border: "1px solid rgba(255, 255, 255, 0.28)",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  padding: "10px 13px",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
               />
             </div>
           </div>
 
           <div className="mb-3">
-            <label className="form-label fw-semibold">Username</label>
+            <label
+              className="form-label fw-semibold"
+              style={{ color: "#ffffff" }}
+            >
+              Username
+            </label>
             <input
               type="text"
               name="username"
@@ -130,11 +215,25 @@ export default function RegisterPage() {
               value={formData.username}
               onChange={handleChange}
               required
+              style={{
+                background: "rgba(255, 255, 255, 0.16)",
+                border: "1px solid rgba(255, 255, 255, 0.28)",
+                color: "#ffffff",
+                borderRadius: "10px",
+                padding: "10px 13px",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
             />
           </div>
 
           <div className="mb-3">
-            <label className="form-label fw-semibold">Email</label>
+            <label
+              className="form-label fw-semibold"
+              style={{ color: "#ffffff" }}
+            >
+              Email
+            </label>
             <input
               type="email"
               name="email"
@@ -143,11 +242,25 @@ export default function RegisterPage() {
               value={formData.email}
               onChange={handleChange}
               required
+              style={{
+                background: "rgba(255, 255, 255, 0.16)",
+                border: "1px solid rgba(255, 255, 255, 0.28)",
+                color: "#ffffff",
+                borderRadius: "10px",
+                padding: "10px 13px",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
             />
           </div>
 
           <div className="mb-3">
-            <label className="form-label fw-semibold">Password</label>
+            <label
+              className="form-label fw-semibold"
+              style={{ color: "#ffffff" }}
+            >
+              Password
+            </label>
             <input
               type="password"
               name="password"
@@ -156,11 +269,25 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={handleChange}
               required
+              style={{
+                background: "rgba(255, 255, 255, 0.16)",
+                border: "1px solid rgba(255, 255, 255, 0.28)",
+                color: "#ffffff",
+                borderRadius: "10px",
+                padding: "10px 13px",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
             />
           </div>
 
           <div className="mb-3">
-            <label className="form-label fw-semibold">Confirm Password</label>
+            <label
+              className="form-label fw-semibold"
+              style={{ color: "#ffffff" }}
+            >
+              Confirm Password
+            </label>
             <input
               type="password"
               name="confirm_password"
@@ -169,12 +296,26 @@ export default function RegisterPage() {
               value={formData.confirm_password}
               onChange={handleChange}
               required
+              style={{
+                background: "rgba(255, 255, 255, 0.16)",
+                border: "1px solid rgba(255, 255, 255, 0.28)",
+                color: "#ffffff",
+                borderRadius: "10px",
+                padding: "10px 13px",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
             />
           </div>
 
           <div className="row">
             <div className="col-md-6 mb-3">
-              <label className="form-label fw-semibold">Phone Number</label>
+              <label
+                className="form-label fw-semibold"
+                style={{ color: "#ffffff" }}
+              >
+                Phone Number
+              </label>
               <input
                 type="tel"
                 name="phone_number"
@@ -183,11 +324,23 @@ export default function RegisterPage() {
                 value={formData.phone_number}
                 onChange={handleChange}
                 required
+                style={{
+                  background: "rgba(255, 255, 255, 0.16)",
+                  border: "1px solid rgba(255, 255, 255, 0.28)",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  padding: "10px 13px",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
               />
             </div>
 
             <div className="col-md-6 mb-3">
-              <label className="form-label fw-semibold">
+              <label
+                className="form-label fw-semibold"
+                style={{ color: "#ffffff" }}
+              >
                 ID / Passport Number
               </label>
               <input
@@ -198,15 +351,45 @@ export default function RegisterPage() {
                 value={formData.id_document}
                 onChange={handleChange}
                 required
+                style={{
+                  background: "rgba(255, 255, 255, 0.16)",
+                  border: "1px solid rgba(255, 255, 255, 0.28)",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  padding: "10px 13px",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
               />
             </div>
           </div>
 
-          <button className="btn btn-primary w-100 mt-2">Create Account</button>
+          <button
+            className="btn w-100 mt-2 fw-semibold"
+            style={{
+              background: "rgba(255, 255, 255, 0.82)",
+              border: "1px solid rgba(255, 255, 255, 0.95)",
+              color: "#1e293b",
+              borderRadius: "10px",
+              padding: "11px",
+              boxShadow: "0 8px 20px rgba(0, 0, 0, 0.16)",
+            }}
+          >
+            Create Account
+          </button>
 
-          <div className="text-center mt-3">
-            <span className="text-muted small">Already have an account? </span>
-            <Link href="/login" className="text-decoration-none fw-semibold">
+          <div className="text-center mt-4">
+            <span
+              className="small"
+              style={{ color: "rgba(255, 255, 255, 0.8)" }}
+            >
+              Already have an account?{" "}
+            </span>
+            <Link
+              href="/login"
+              className="text-decoration-none fw-semibold"
+              style={{ color: "#ffffff" }}
+            >
               Log In
             </Link>
           </div>

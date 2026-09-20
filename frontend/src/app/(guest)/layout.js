@@ -35,21 +35,47 @@ export default function GuestLayout({ children }) {
           right: 0,
           height: "66px",
           zIndex: 1050,
-
           backgroundColor: "rgba(18, 18, 18, 0.55)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
-
           borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
         }}
       >
         <NextLink
           href="/"
-          className="navbar-brand fw-bold fs-4 text-uppercase text-light"
-          style={{ letterSpacing: "2px" }}
+          className="navbar-brand d-flex align-items-center text-light text-decoration-none"
+          style={{ gap: "12px" }}
         >
-          Hotel Palms
+          <div
+            className="d-flex align-items-center justify-content-center overflow-hidden"
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.14)",
+              border: "1px solid rgba(255, 255, 255, 0.28)",
+              boxShadow:
+                "0 6px 18px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
+            }}
+          >
+            <img
+              src="/images/hotel_palms_logo.jpg"
+              alt="Hotel Palms Logo"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+
+          <span
+            className="fw-bold fs-4 text-uppercase"
+            style={{ letterSpacing: "2px" }}
+          >
+            Hotel Palms
+          </span>
         </NextLink>
 
         <div className="navbar-nav ms-auto d-flex align-items-center gap-4">
